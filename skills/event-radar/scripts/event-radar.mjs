@@ -263,6 +263,7 @@ function cmdLonglist(a) {
   const rank = { high: 0, medium: 1, low: 2 };
   const rows = eventsOf(readJson(a.events)).filter((e) => st.includes(e.status) && !(isDate(e.end_date || e.start_date) && (e.end_date || e.start_date) < t))
     .sort((x, y) => (x.tier ?? 9) - (y.tier ?? 9) || (rank[x.match] ?? 3) - (rank[y.match] ?? 3) || String(x.start_date || "9999").localeCompare(String(y.start_date || "9999")));
+  const price = (e) => e.price_text || (e.prices?.length ? `${e.prices[0].currency} ${Math.min(...e.prices.map((p) => p.amount))}–${Math.max(...e.prices.map((p) => p.amount))}` : "n/a");
   const where = (e) => (isOnline(e) ? "Online" : [e.city, e.country].filter(Boolean).join(", ") || "TBD");
   let text;
   if ((a.format || "md") === "csv") {
@@ -271,11 +272,12 @@ function cmdLonglist(a) {
     const H = lang === "es" ? { h: "Lista larga (todo lo que podría encajar)", n: "eventos", tier: "Tier", online: "Online / webinars", m: "Encaje", none: "Nada pendiente." } : { h: "Long list (everything that could match)", n: "events", tier: "Tier", online: "Online / webinars", m: "Match", none: "Nothing pending." };
     const L = [`# ${H.h}`, `_${t} · ${rows.length} ${H.n}_`, ""];
     if (!rows.length) L.push(H.none);
+    let n = 0;
     const groups = [...new Set(rows.map((e) => (isOnline(e) ? "online" : e.tier ?? "?")))];
     for (const g of groups.sort((x, y) => (x === "online") - (y === "online") || String(x).localeCompare(String(y)))) {
-      L.push(g === "online" ? `## ${H.online}` : `## ${H.tier} ${g}`, "", `| id | Event | ${H.m} | Date | Where |`, "|---|---|---|---|---|");
+      L.push(g === "online" ? `## ${H.online}` : `## ${H.tier} ${g}`, "", `| # | Event | Date | Where | Price | Description | ${H.m} |`, "|---|---|---|---|---|---|---|");
       for (const e of rows.filter((r) => (isOnline(r) ? "online" : r.tier ?? "?") === g))
-        L.push(`| ${e.id} | [${e.name}](${e.url || ""}) | ${e.match || "?"}${e.match_reason ? " — " + e.match_reason : ""} | ${e.start_date || "TBD"} | ${where(e)} |`);
+        L.push(`| ${++n} | [${e.name}](${e.url || ""}) | ${e.start_date || "TBD"}${e.end_date && e.end_date !== e.start_date ? " → " + e.end_date : ""} | ${where(e)}${e.venue ? " (" + e.venue + ")" : ""} | ${price(e)} | ${e.description || e.match_reason || ""} | ${e.match || "?"} |`);
       L.push("");
     }
     text = L.join("\n");
