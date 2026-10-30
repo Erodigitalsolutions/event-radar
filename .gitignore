@@ -1,0 +1,9 @@
+node_modules/
+.event-radar/
+*.local.yaml
+profile.yaml
+events.json
+dossiers/
+reports/
+.DS_Store
+Thumbs.db

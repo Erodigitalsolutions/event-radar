@@ -1,0 +1,21 @@
+{
+  "events": [
+    {
+      "name": "Example Retail Expo 2027", "url": "https://retail-expo.example/", "start_date": "2027-03-10", "end_date": "2027-03-12",
+      "city": "Toronto", "country": "Canada", "venue": "Example Convention Centre", "tier": 1, "format": "expo", "organizer": "Example Events Inc.",
+      "registration_deadline": "2027-03-01", "cost_estimate": { "currency": "CAD", "min": 150, "max": 300, "price_known": true },
+      "prices": [{ "label": "Regular", "amount": 150, "currency": "CAD", "until": "2027-03-01" }],
+      "scores": { "fit": 8, "audience": 8, "people": 7, "credibility": 9, "cost": 9, "logistics": 10, "timing": 7 },
+      "evidence": { "fit": { "note": "Tema central coincide con el objetivo #1 (ficticio)", "url": "https://retail-expo.example/about" } }
+    },
+    {
+      "name": "Sample Founders Summit", "url": "https://founders-summit.example/", "start_date": "2027-05-20", "end_date": "2027-05-21",
+      "city": "Austin", "country": "USA", "tier": 3, "format": "summit",
+      "scores": { "fit": 6, "audience": 7, "people": null, "credibility": 5, "cost": 4, "logistics": 3, "timing": 7 }
+    },
+    {
+      "name": "Old Meetup 2025", "url": "https://old-meetup.example/", "start_date": "2025-01-10", "city": "Toronto", "tier": 1,
+      "scores": { "fit": 9, "audience": 9, "people": 9, "credibility": 9, "cost": 9, "logistics": 9, "timing": 9 }
+    }
+  ]
+}

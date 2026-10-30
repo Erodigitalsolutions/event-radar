@@ -1,0 +1,7 @@
+{
+  "name": "event-radar",
+  "version": "0.1.0",
+  "description": "Descubre, puntúa y prepara eventos (conferencias, ferias, charlas) alineados con tu empresa. Fase 1: onboarding y perfil.",
+  "author": { "name": "Event Radar" },
+  "keywords": ["events", "conferences", "networking", "research", "reminders"]
+}

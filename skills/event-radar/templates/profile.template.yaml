@@ -1,0 +1,108 @@
+# Event Radar - perfil del usuario (schema_version 1)
+# Regla: null = no se sabe / no aplica. Nunca inventar valores.
+schema_version: 1
+onboarding_completed: false   # true solo tras confirmacion del usuario
+created: null          # YYYY-MM-DD
+updated: null
+
+person:
+  name: null
+  role: null
+  linkedin_url: null   # opcional, solo para contexto
+  languages: []        # idiomas que habla (para filtrar eventos)
+
+company:
+  name: null
+  website: null
+  what_we_do: null     # 2-3 frases
+  business_model: null # B2B | B2C | B2B2C | marketplace | agencia | otro
+  industry: []
+  stage: null          # idea | early | growth | established
+  team_size: null
+  markets: []          # donde vende
+  products_services: []
+
+goals:                  # ordenar por prioridad (1 = mas importante)
+  - { rank: 1, goal: null }   # customers | partners | suppliers | investors | learning | brand | hiring | other
+success_definition: null      # que haria que un evento "valiera la pena"
+
+audience:
+  ideal_customer: null        # quien, cargo, tamano de empresa
+  ideal_partner: null
+  roles_to_meet: []           # cargos que quieres conocer
+  companies_to_meet: []       # target accounts
+  competitors_to_watch: []
+
+topics:
+  include: []                 # palabras clave / temas
+  exclude: []
+
+geography:
+  home_base: null             # ciudad, provincia/estado, pais
+  tier1: { label: null, regions: [] }   # ej. area metropolitana
+  tier2: { label: null, regions: [] }   # ej. mismo pais
+  tier3: { label: null, regions: [] }   # ej. internacional
+  willing_to_fly: null        # true | false
+  max_travel_days_per_year: null
+  needs_visa_check: null
+
+budget:
+  currency: null
+  per_event_max: null
+  annual_total: null
+  covers: [ticket, flight, hotel, meals, transport]
+  employer_pays: null
+
+preferences:
+  formats: []                 # expo | conference | meetup | workshop | talk | summit | other
+  size: null                  # small | medium | large | any
+  event_language: []
+  travel_style: null          # economico | balanceado | comodo
+  attends_with: null          # solo | equipo
+  constraints: []             # fechas bloqueadas, accesibilidad, dieta, etc.
+
+history:
+  liked_events: []
+  disliked_events: []
+  notes: null
+
+scan:
+  frequency: null             # weekly | biweekly | monthly | custom
+  day_and_time: null          # ej. "lunes 08:00"
+  timezone: null
+  horizon_months: 12          # cuanto a futuro buscar
+  min_score_to_report: 60
+  sources_extra: []           # URLs/calendarios que el usuario ya sigue
+
+reports:
+  language: null              # codigo ISO: es | en | fr ...
+  deliverable: []             # markdown | excel | word | email | pdf | slack | notion | otro
+  detail_level: null          # corto | medio | profundo
+  delivery_folder: null
+
+reminders:
+  enabled: true
+  offsets_months: [6, 3, 1]   # antes del evento
+  extra_offsets_days: []      # ej. [14, 3]
+  deadline_alerts: true       # registro, early-bird, call for speakers
+  channels: []                # calendar | email | slack | notion | monday | ninguno
+  digest_frequency: null      # weekly | biweekly | monthly | none
+  quiet_hours: null
+
+crm:
+  mode: null                  # existing | create | none
+  existing_tool: null         # hubspot | salesforce | notion | airtable | sheets | otro
+  create_as: null            # excel | csv | sheets | notion | airtable
+  track: [event, person, company, notes, followup_date]
+
+integrations:                 # solo lo que el usuario confirme
+  calendar: null              # google | outlook | apple | none
+  email: null                 # gmail | outlook | none
+  chat: null                  # slack | teams | none
+  workspace: null             # notion | monday | asana | clickup | airtable | none
+  storage: null               # drive | onedrive | dropbox | local
+
+research_rules:
+  public_sources_only: true   # fijo: nunca scraping de sesiones privadas
+  linkedin: public_pages_only
+  payments: never             # el skill nunca registra ni paga
