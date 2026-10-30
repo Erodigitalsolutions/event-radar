@@ -44,15 +44,16 @@
 
 - `tier`: 1 a 4 (los eventos online suelen ir en el tier 1 si el usuario así lo define), según `geography` del perfil.
 - `format`: `expo | conference | meetup | workshop | talk | summit | webinar | other`.
-- `status`: `new → candidate → watching → deep-dive → attending`; o `filtered | skipped | cancelled`.
+- `status`: `new → candidate → watching → deep-dive → attending → attended`; o `filtered | skipped | cancelled`.
   - `new`: recién descubierto, sin puntuar.
   - `candidate`: puntuado por el script.
-  - `watching`/`deep-dive`/`attending`/`skipped`: decisiones del usuario. **No los cambies tú sin que él lo diga.**
+  - `watching`/`deep-dive`/`attending`/`skipped`/`attended`: decisiones del usuario (`attended`/`skipped` los fija `outcome`). **No los cambies tú sin que él lo diga.**
   - `filtered`: descartado por filtro duro (`filtered_reason`).
 - `confidence`: `high` (página oficial del organizador) | `medium` | `low` (solo agregador).
 - `scores`: 0–10 por criterio de `scoring-rubric.md`. `null` si no se evaluó.
 - `evidence[k]`: justificación corta + URL. Sin evidencia no se sube de 5.
 - `unverified`: claves de criterio o campos que no se pudieron comprobar.
+- `outcome` (lo escribe `outcome`, datos del usuario): `{decision, rating 1-5, leads, meetings, opportunities, cost_actual, currency, would_return, reason, notes, recorded_at}`.
 - Campos que escribe el **script** (no a mano): `score`, `label`, `score_notes`, `status` (new→candidate / filtered por pasado).
 
 ## Qué hace cada comando del script
@@ -68,6 +69,10 @@
 | `contacts --people people.json [--events events.json] [--min-priority A\|B\|C] [--out file.csv]` | CSV de contactos ordenado por prioridad, listo para el CRM. |
 | `reminders --events events.json [--offsets-months 6,3,1] [--registered-days 14,7] [--extra-days N] [--deadline-days 14,3] [--window-days N] [--state f --mark-synced]` | Lista los recordatorios y alertas de deadline de eventos seguidos, sin duplicar los ya sincronizados. |
 | `ics --events events.json --out file.ics` | Calendario importable con eventos seguidos y recordatorios. |
+| `crm --events events.json --people people.json [--existing hoja.csv] [--out-dir d]` | Genera pestañas `Events` y `Contacts` (CSV + `crm-sheet.json`). Con `--existing` conserva lo que el usuario editó en la hoja. |
+| `outcome --events events.json --id <id> --decision attended|skipped [--rating --leads --meetings --opportunities --cost-actual --currency --would-return --reason --notes]` | Registra el resultado del usuario y pasa el evento a `attended`/`skipped`. |
+| `post-event --events events.json --id <id> [--people f] [--lang] [--out f]` | Checklist post-evento y contactos a seguir con fecha límite por prioridad. |
+| `learn --events events.json [--goal g] [--min-events 3] [--out f]` | ROI, series que gustaron, razones de descarte y pesos sugeridos (solo propuesta). |
 | `digest --events events.json [--window-days 60] [--lang en\|es] [--out file.md]` | Resumen "qué viene". |
 
 Los reportes en Excel/Word/PDF se producen a partir del CSV/Markdown con las herramientas de documentos disponibles.

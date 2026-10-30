@@ -100,6 +100,8 @@ crm:
   existing_tool: null         # hubspot | salesforce | notion | airtable | sheets | otro
   create_as: null            # excel | csv | sheets | notion | airtable
   track: [event, person, company, notes, followup_date]
+  sheet_url: null            # URL de la hoja (Google Sheets) una vez creada
+  sheet_id: null
 
 integrations:                 # solo lo que el usuario confirme
   calendar: null              # google | outlook | apple | none
@@ -112,3 +114,10 @@ research_rules:
   public_sources_only: true   # fijo: nunca scraping de sesiones privadas
   linkedin: public_pages_only
   payments: never             # el skill nunca registra ni paga
+
+learning:                     # lo rellena Fase 5 SOLO tras confirmación del usuario
+  enabled: true
+  min_rated_events: 3         # no se proponen cambios con menos eventos valorados
+  liked_series: []            # para score --liked
+  weights_override: null      # para score --weights, ej. {fit: 30, audience: 34, ...}
+  last_reviewed: null

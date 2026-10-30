@@ -1,6 +1,6 @@
 ---
 name: event-radar
-description: Descubre, puntúa y prepara eventos (conferencias, ferias, charlas, meetups) alineados con una empresa y le recuerda los deadlines. Úsalo cuando el usuario quiera encontrar eventos relevantes, configurar su perfil de eventos (onboarding), ver el ranking de eventos, preparar un evento (briefing de expositores y asistentes) o configurar recordatorios de eventos. Fase actual - onboarding y perfil.
+description: Descubre, puntúa y prepara eventos (conferencias, ferias, charlas, meetups) alineados con una empresa y le recuerda los deadlines. Úsalo cuando el usuario quiera encontrar eventos relevantes, configurar su perfil de eventos (onboarding), ver el ranking de eventos, preparar un evento (briefing de expositores y asistentes) o configurar recordatorios de eventos. Cubre onboarding, scan, deep-dive, recordatorios, CRM, post-evento y aprendizaje.
 ---
 
 # Event Radar
@@ -15,9 +15,9 @@ Agente que encuentra eventos relevantes para la empresa del usuario, los evalúa
 | 2 | Scan de eventos por tiers + scoring + reporte | **Construida** |
 | 3 | Deep-dive y briefing de expositores/asistentes (fuentes públicas) | **Construida** |
 | 4 | Recordatorios (6/3/1 meses, deadlines), calendario (.ics / Google Calendar), digest y scan programado | **Construida** |
-| 5 | CRM, post-evento, aprendizaje por feedback | Pendiente |
+| 5 | CRM (hoja simple), post-evento, ROI y aprendizaje por feedback | **Construida** |
 
-Si el usuario pide algo de una fase pendiente: dile que aún no está construida, ofrece el onboarding si falta y apunta qué le faltaría para ejecutar esa fase.
+Todas las fases están construidas. Si falta el onboarding, ofrécelo antes de nada.
 
 ## Dónde viven los datos
 
@@ -70,6 +70,10 @@ Reglas específicas: nunca afirmes que alguien asistirá sin fuente; separa *con
 ## Flujo: Recordatorios y automatización
 
 Cuando el usuario siga un evento (`watching`/`deep-dive`/`attending`), cambie su estado, o pida "qué viene", "recuérdame" o "programa el scan", sigue `references/reminders-and-automation.md`. Comandos: `reminders`, `ics`, `digest`. Los eventos pasan a `attending` **solo** cuando el usuario dice que ya se registró. Para crear la tarea programada del scan o cualquier acción persistente fuera de archivos, **pide confirmación antes**.
+
+## Flujo: CRM, post-evento y aprendizaje
+
+Cuando el usuario pida el CRM, diga que fue (o no fue) a un evento, o pida "qué hemos aprendido", sigue `references/crm-and-post-event.md`. Comandos: `crm`, `post-event`, `outcome`, `learn`. Los resultados (asistió, valoración, leads, costos) los da el usuario; no los inventes. Los mensajes de seguimiento son borradores. Los cambios de pesos/gustos salen de `learn` como **propuesta** y solo se guardan en el perfil con su OK. Crear la hoja en su Drive requiere confirmación previa.
 
 ## Reglas permanentes
 

@@ -12,7 +12,7 @@ Plugin/skill de [Claude Code](https://claude.com/claude-code) que encuentra even
 | 2 | Scan por tiers geográficos, scoring y reporte (md / csv → excel, word, correo) | ✅ |
 | 3 | Deep-dive y briefing de expositores y asistentes (fuentes públicas) | ✅ |
 | 4 | Recordatorios 6/3/1 meses, deadlines, calendario (.ics / Google Calendar), digest y scan programado | ✅ |
-| 5 | CRM, post-evento, aprendizaje por feedback | ⏳ |
+| 5 | CRM (hoja simple), post-evento con seguimiento, ROI y aprendizaje por feedback | ✅ |
 
 ## Uso rápido
 
@@ -40,6 +40,10 @@ node skills/event-radar/scripts/event-radar.mjs contacts --people people.json --
 node skills/event-radar/scripts/event-radar.mjs reminders --events events.json --registered-days 14,7 --window-days 60
 node skills/event-radar/scripts/event-radar.mjs ics --events events.json --out recordatorios.ics
 node skills/event-radar/scripts/event-radar.mjs digest --events events.json --window-days 60 --lang en
+node skills/event-radar/scripts/event-radar.mjs crm --events events.json --people people.json --out-dir crm/
+node skills/event-radar/scripts/event-radar.mjs post-event --events events.json --id <event-id> --people people.json --lang en
+node skills/event-radar/scripts/event-radar.mjs outcome --events events.json --id <event-id> --decision attended --rating 4 --leads 3 --cost-actual 800 --currency CAD
+node skills/event-radar/scripts/event-radar.mjs learn --events events.json --goal customers
 ```
 
 Hay datos ficticios de prueba en [`examples/`](examples/incoming.example.json).

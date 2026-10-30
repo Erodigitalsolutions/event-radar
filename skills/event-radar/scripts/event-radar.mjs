@@ -4,6 +4,7 @@
 //   node event-radar.mjs merge  --events events.json --incoming new.json
 //   node event-radar.mjs score  --events events.json --goal customers [--weights '{"fit":30}'] [--liked "A,B"] [--today 2026-10-29]
 //   node event-radar.mjs report --events events.json [--min-score 60] [--format md|csv] [--lang es|en] [--out file] [--today ...]
+//   (tambien: dossier | contacts | reminders | ics | digest | crm | outcome | post-event | learn; ver references/events-schema.md)
 //
 // El modelo asigna sub-puntajes con evidencia; este script hace la matematica,
 // el dedupe y el reporte para que sean reproducibles.
@@ -80,7 +81,7 @@ const eventsOf = (db) => (Array.isArray(db) ? db : db.events || []);
 const isDate = (d) => typeof d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d);
 
 // ---------- merge ----------
-const PROTECTED = new Set(["status", "scores", "evidence", "first_seen", "score", "label", "filtered_reason", "notes", "unverified"]);
+const PROTECTED = new Set(["status", "scores", "evidence", "first_seen", "score", "label", "filtered_reason", "notes", "unverified", "outcome"]);
 
 function sameEvent(a, b) {
   const ua = urlKey(a.url), ub = urlKey(b.url);
@@ -169,7 +170,7 @@ function cmdScore(a) {
   const t = today(a);
   const out = { scored: 0, filtered_past: 0, skipped_no_scores: 0 };
   for (const e of list) {
-    if (["cancelled", "skipped"].includes(e.status)) continue;
+    if (["cancelled", "skipped", "attended"].includes(e.status)) continue;
     const end = e.end_date || e.start_date;
     if (isDate(end) && end < t) { e.status = "filtered"; e.filtered_reason = "past"; out.filtered_past++; continue; }
     if (e.status === "filtered") continue;
@@ -410,6 +411,172 @@ function cmdDigest(a) {
   if (a.out && a.out !== true) { fs.writeFileSync(a.out, text, "utf8"); console.log(`Digest escrito en ${a.out}`); } else process.stdout.write(text);
 }
 
+// ---------- crm / outcome / post-event / learn (Fase 5) ----------
+const CONTACT_STATUSES = ["to-contact", "contacted", "replied", "meeting", "opportunity", "won", "lost", "no-response", "not-relevant"];
+const USER_COLS = ["status", "last_contact_date", "followup_date", "next_step", "notes"];
+const CONTACT_HEAD = ["key", "event", "event_date", "priority", "name", "title", "company", "role_in_event", "confirmed", "relevance", "why", "public_profile", "source", "last_checked", ...USER_COLS];
+const EVENT_HEAD = ["id", "name", "start_date", "end_date", "city", "country", "tier", "score", "label", "status", "url", "registration_deadline", "decision_reason", "rating", "leads", "meetings", "opportunities", "cost_actual", "currency", "would_return", "outcome_notes"];
+
+function parseCsv(text) {
+  const rows = []; let row = [], cell = "", q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) { if (c === '"') { if (text[i + 1] === '"') { cell += '"'; i++; } else q = false; } else cell += c; }
+    else if (c === '"') q = true;
+    else if (c === ",") { row.push(cell); cell = ""; }
+    else if (c === "\n" || c === "\r") { if (c === "\r" && text[i + 1] === "\n") i++; row.push(cell); cell = ""; if (row.some((x) => x !== "")) rows.push(row); row = []; }
+    else cell += c;
+  }
+  if (cell !== "" || row.length) { row.push(cell); if (row.some((x) => x !== "")) rows.push(row); }
+  return rows;
+}
+const toCsv = (rows) => rows.map((r) => r.map(csvCell).join(",")).join("\n") + "\n";
+const contactKey = (p) => `${p.event_id || ""}|${norm(p.name)}`;
+const FOLLOWUP_DAYS = { A: 2, B: 5, C: 10 };
+
+function cmdCrm(a) {
+  if (!a.events || !a.people) die("uso: crm --events <events.json> --people <people.json> [--existing contacts-from-sheet.csv] [--out-dir dir]");
+  const events = eventsOf(readJson(a.events));
+  const people = readJson(a.people);
+  const dir = a["out-dir"] && a["out-dir"] !== true ? a["out-dir"] : ".";
+  fs.mkdirSync(dir, { recursive: true });
+  // Estado que el usuario edita en la hoja: se conserva por clave.
+  const prev = new Map(); const prevRows = [];
+  if (a.existing && a.existing !== true) {
+    const t = parseCsv(fs.readFileSync(a.existing, "utf8")); const h = t[0] || [];
+    if (!h.includes("key")) die("--existing debe tener columna 'key' (exporta la pestaña Contacts tal cual)");
+    for (const r of t.slice(1)) { const o = {}; h.forEach((k, i) => (o[k] = r[i] ?? "")); prev.set(o.key, o); prevRows.push(o); }
+  }
+  const byId = new Map(events.map((e) => [e.id, e]));
+  const seen = new Set(); const crows = [];
+  for (const p of people) {
+    const key = contactKey(p); seen.add(key);
+    const ev = byId.get(p.event_id) || {};
+    const old = prev.get(key) || {};
+    let follow = old.followup_date || p.followup_date || "";
+    if (!follow && isDate(ev.end_date) && ["attending", "attended"].includes(ev.status)) follow = addDays(ev.end_date, FOLLOWUP_DAYS[p.priority] ?? 10);
+    const user = { status: old.status || p.status || "to-contact", last_contact_date: old.last_contact_date || "", followup_date: follow, next_step: old.next_step || "", notes: old.notes || p.notes || "" };
+    if (!CONTACT_STATUSES.includes(user.status)) console.error(`Aviso: estado "${user.status}" de ${p.name} no es estándar (${CONTACT_STATUSES.join(", ")}).`);
+    crows.push([key, ev.name || p.event_id, ev.start_date || "", p.priority || "", p.name, p.title, p.company, p.role_in_event, p.confirmed ? "yes" : "no", p.relevance, p.why, p.linkedin_url, (p.sources || [])[0], p.last_checked, ...USER_COLS.map((k) => user[k])]);
+  }
+  let kept = 0;
+  for (const o of prevRows) if (!seen.has(o.key)) { crows.push(CONTACT_HEAD.map((k) => o[k] ?? "")); kept++; }
+  const erows = events.filter((e) => e.status && e.status !== "new").map((e) => {
+    const o = e.outcome || {};
+    return [e.id, e.name, e.start_date, e.end_date, e.city, e.country, e.tier, e.score, e.label, e.status, e.url, e.registration_deadline, o.reason, o.rating, o.leads, o.meetings, o.opportunities, o.cost_actual, o.currency, o.would_return, o.notes];
+  });
+  const tabs = { Events: [EVENT_HEAD, ...erows], Contacts: [CONTACT_HEAD, ...crows] };
+  fs.writeFileSync(`${dir}/crm-events.csv`, toCsv(tabs.Events), "utf8");
+  fs.writeFileSync(`${dir}/crm-contacts.csv`, toCsv(tabs.Contacts), "utf8");
+  writeJson(`${dir}/crm-sheet.json`, { tabs, statuses: CONTACT_STATUSES });
+  console.log(JSON.stringify({ events: erows.length, contacts: crows.length, preserved_from_sheet: prev.size, kept_only_in_sheet: kept, out_dir: dir }, null, 2));
+}
+
+function findEvent(db, id) {
+  const e = eventsOf(db).find((x) => x.id === id);
+  if (!e) die(`no existe el evento "${id}"`);
+  return e;
+}
+const optNum = (a, k, lo, hi) => {
+  if (a[k] === undefined) return undefined;
+  const n = Number(a[k]);
+  if (!Number.isFinite(n) || (lo !== undefined && n < lo) || (hi !== undefined && n > hi)) die(`--${k} inválido`);
+  return n;
+};
+
+function cmdOutcome(a) {
+  if (!a.events || !a.id) die("uso: outcome --events <events.json> --id <event-id> --decision attended|skipped [--rating 1-5] [--leads N] [--meetings N] [--opportunities N] [--cost-actual N --currency CAD] [--would-return yes|no] [--reason txt] [--notes txt]");
+  if (!["attended", "skipped"].includes(a.decision)) die("--decision debe ser attended o skipped");
+  const db = readJson(a.events); const e = findEvent(db, a.id); const t = today(a);
+  const o = { ...(e.outcome || {}) };
+  const set = (k, v) => { if (v !== undefined && v !== true) o[k] = v; };
+  set("rating", optNum(a, "rating", 1, 5)); set("leads", optNum(a, "leads", 0)); set("meetings", optNum(a, "meetings", 0));
+  set("opportunities", optNum(a, "opportunities", 0)); set("cost_actual", optNum(a, "cost-actual", 0));
+  set("currency", a.currency); set("reason", a.reason); set("notes", a.notes);
+  if (a["would-return"] !== undefined) { if (!["yes", "no"].includes(a["would-return"])) die("--would-return: yes|no"); o.would_return = a["would-return"]; }
+  o.decision = a.decision; o.recorded_at = t;
+  e.outcome = o; e.status = a.decision;
+  const warn = a.decision === "attended" && isDate(e.end_date) && e.end_date > t ? [`el evento termina ${e.end_date}, aún no ha pasado`] : [];
+  writeJson(a.events, db);
+  console.log(JSON.stringify({ id: e.id, status: e.status, outcome: o, warnings: warn }, null, 2));
+}
+
+function cmdPostEvent(a) {
+  if (!a.events || !a.id) die("uso: post-event --events <events.json> --id <event-id> [--people people.json] [--lang en|es] [--out file.md]");
+  const lang = a.lang === "es" ? "es" : "en";
+  const e = findEvent(readJson(a.events), a.id);
+  const people = a.people && a.people !== true ? readJson(a.people).filter((p) => p.event_id === e.id) : [];
+  const ord = { A: 0, B: 1, C: 2 };
+  people.sort((x, y) => (ord[x.priority] ?? 2) - (ord[y.priority] ?? 2) || (y.relevance ?? 0) - (x.relevance ?? 0));
+  const D = lang === "es"
+    ? { h: "Post-evento", due: "Seguimiento", who: "Contactos a seguir", none: "Sin contactos registrados; añade a quienes conociste.", todo: "Pendientes", t1: "Registrar resultado: `outcome --decision attended --rating … --leads … --meetings …`", t2: "Enviar mensajes de seguimiento (borradores; los envías tú)", t3: "Actualizar la hoja CRM (`crm --existing …`)", t4: "Anotar lecciones: ¿volverías? ¿qué cambiarías?", t5: "Guardar notas/fotos de contactos nuevos que conociste", by: "antes de" }
+    : { h: "Post-event", due: "Follow-up", who: "Contacts to follow up", none: "No contacts recorded; add the people you met.", todo: "To do", t1: "Record the outcome: `outcome --decision attended --rating … --leads … --meetings …`", t2: "Send follow-up messages (drafts; you send them)", t3: "Update the CRM sheet (`crm --existing …`)", t4: "Write lessons: would you return? what would you change?", t5: "Save notes/photos of new contacts you met", by: "by" };
+  const end = isDate(e.end_date) ? e.end_date : e.start_date;
+  const L = [`# ${D.h}: ${e.name}`, `${e.start_date || "?"}${e.end_date && e.end_date !== e.start_date ? " → " + e.end_date : ""} · ${[e.city, e.country].filter(Boolean).join(", ")}`, "", `## ${D.who}`, ""];
+  if (!people.length) L.push(D.none);
+  else for (const p of people) {
+    const d = isDate(end) ? addDays(end, FOLLOWUP_DAYS[p.priority] ?? 10) : "";
+    L.push(`- [ ] **${p.priority || "C"}** ${p.name}${p.title ? " — " + p.title : ""}${p.company ? ", " + p.company : ""}${d ? ` · ${D.by} ${d}` : ""}${p.why ? `\n  - ${p.why}` : ""}`);
+  }
+  L.push("", `## ${D.todo}`, "", `- [ ] ${D.t1}`, `- [ ] ${D.t2}`, `- [ ] ${D.t3}`, `- [ ] ${D.t4}`, `- [ ] ${D.t5}`, "");
+  const text = L.join("\n");
+  if (a.out && a.out !== true) { fs.writeFileSync(a.out, text, "utf8"); console.log(`Post-evento escrito en ${a.out}`); } else process.stdout.write(text);
+}
+
+function pearson(xs, ys) {
+  const n = xs.length; if (n < 3) return null;
+  const mx = xs.reduce((s, v) => s + v, 0) / n, my = ys.reduce((s, v) => s + v, 0) / n;
+  let sxy = 0, sxx = 0, syy = 0;
+  for (let i = 0; i < n; i++) { sxy += (xs[i] - mx) * (ys[i] - my); sxx += (xs[i] - mx) ** 2; syy += (ys[i] - my) ** 2; }
+  return sxx === 0 || syy === 0 ? null : sxy / Math.sqrt(sxx * syy);
+}
+const series = (name) => String(name || "").replace(/\b(19|20)\d{2}\b/g, "").replace(/\s+/g, " ").trim();
+
+function cmdLearn(a) {
+  if (!a.events) die("uso: learn --events <events.json> [--goal customers] [--min-events 3] [--out file.json]");
+  const events = eventsOf(readJson(a.events));
+  const minN = Number(a["min-events"] && a["min-events"] !== true ? a["min-events"] : 3);
+  const att = events.filter((e) => e.status === "attended" && e.outcome);
+  const rated = att.filter((e) => Number.isFinite(e.outcome.rating));
+  const skipped = events.filter((e) => e.status === "skipped" && e.outcome?.reason);
+  // ROI
+  const byCur = {};
+  for (const e of att) {
+    const o = e.outcome; const c = o.currency || "n/a";
+    const r = (byCur[c] ??= { events: 0, cost: 0, leads: 0, meetings: 0, opportunities: 0 });
+    r.events++; r.cost += o.cost_actual || 0; r.leads += o.leads || 0; r.meetings += o.meetings || 0; r.opportunities += o.opportunities || 0;
+  }
+  for (const r of Object.values(byCur)) { r.cost_per_lead = r.leads ? Math.round(r.cost / r.leads) : null; r.cost_per_meeting = r.meetings ? Math.round(r.cost / r.meetings) : null; }
+  // Pesos sugeridos (solo propuesta)
+  const goal = a.goal && a.goal !== true ? a.goal : null;
+  const base = weightsFor(goal, null);
+  let suggested = null; const corr = {};
+  const eligible = rated.filter((e) => e.scores);
+  if (eligible.length >= minN) {
+    suggested = {};
+    for (const k of KEYS) {
+      const pts = eligible.filter((e) => typeof e.scores[k] === "number");
+      const r = pearson(pts.map((e) => e.scores[k]), pts.map((e) => e.outcome.rating));
+      corr[k] = r == null ? null : Math.round(r * 100) / 100;
+      const delta = r == null || pts.length < minN ? 0 : Math.round(Math.max(-1, Math.min(1, r)) * 5);
+      suggested[k] = Math.max(0, Math.round(base[k] * 100) + delta);
+    }
+  }
+  const liked = rated.filter((e) => e.outcome.rating >= 4).map((e) => series(e.name));
+  const disliked = rated.filter((e) => e.outcome.rating <= 2).map((e) => series(e.name));
+  const reasons = {};
+  for (const e of skipped) { const r = norm(e.outcome.reason); reasons[r] = (reasons[r] || 0) + 1; }
+  const out = {
+    attended: att.length, rated: rated.length, skipped_with_reason: skipped.length,
+    enough_data: eligible.length >= minN, min_events: minN,
+    liked_arg: [...new Set(liked)].filter((n) => !disliked.includes(n)).join(","), disliked: [...new Set(disliked)],
+    criterion_rating_correlation: corr, suggested_weights: suggested,
+    skip_reasons: reasons, roi_by_currency: byCur,
+    note: suggested ? "Propuesta: muéstrala al usuario; solo con su OK se guarda en profile.learning y se usa con score --weights/--liked." : `Aún no hay datos suficientes (${eligible.length}/${minN} eventos valorados con scores). No cambies los pesos.`,
+  };
+  if (a.out && a.out !== true) { writeJson(a.out, out); console.log(`Aprendizaje escrito en ${a.out}`); } else console.log(JSON.stringify(out, null, 2));
+}
+
 // ---------- main ----------
 const args = parseArgs(process.argv.slice(2));
 const cmd = args._[0];
@@ -421,4 +588,8 @@ else if (cmd === "contacts") cmdContacts(args);
 else if (cmd === "reminders") cmdReminders(args);
 else if (cmd === "ics") cmdIcs(args);
 else if (cmd === "digest") cmdDigest(args);
-else die("comandos: merge | score | report | dossier | contacts | reminders | ics | digest");
+else if (cmd === "crm") cmdCrm(args);
+else if (cmd === "outcome") cmdOutcome(args);
+else if (cmd === "post-event") cmdPostEvent(args);
+else if (cmd === "learn") cmdLearn(args);
+else die("comandos: merge | score | report | dossier | contacts | reminders | ics | digest | crm | outcome | post-event | learn");
