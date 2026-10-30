@@ -41,20 +41,22 @@ geography:
   home_base: null             # ciudad, provincia/estado, pais
   tier1: { label: null, regions: [] }   # ej. area metropolitana
   tier2: { label: null, regions: [] }   # ej. mismo pais
-  tier3: { label: null, regions: [] }   # ej. internacional
+  tier3: { label: null, regions: [] }   # ej. USA
+  tier4: { label: null, regions: [] }   # opcional, ej. internacional
   willing_to_fly: null        # true | false
   max_travel_days_per_year: null
   needs_visa_check: null
 
 budget:
   currency: null
-  per_event_max: null
+  per_event_max: null           # tope unico, o usar per_event_max_by_tier
+  per_event_max_by_tier: { tier1: null, tier2: null, tier3: null, tier4: null }
   annual_total: null
   covers: [ticket, flight, hotel, meals, transport]
   employer_pays: null
 
 preferences:
-  formats: []                 # expo | conference | meetup | workshop | talk | summit | other
+  formats: []                 # expo | conference | meetup | workshop | talk | summit | webinar | other
   size: null                  # small | medium | large | any
   event_language: []
   travel_style: null          # economico | balanceado | comodo
@@ -79,11 +81,15 @@ reports:
   deliverable: []             # markdown | excel | word | email | pdf | slack | notion | otro
   detail_level: null          # corto | medio | profundo
   delivery_folder: null
+  email_to: null
+  email_style: null           # short | full
 
 reminders:
   enabled: true
   offsets_months: [6, 3, 1]   # antes del evento
-  extra_offsets_days: []      # ej. [14, 3]
+  extra_offsets_days: []      # aplican a todos los eventos en seguimiento
+  registered_only_offsets_days: []   # ej. [14, 7]: solo eventos con status attending
+  auto_send_to_self: false    # true = enviar sin mostrar borrador, solo al propio correo del usuario
   deadline_alerts: true       # registro, early-bird, call for speakers
   channels: []                # calendar | email | slack | notion | monday | ninguno
   digest_frequency: null      # weekly | biweekly | monthly | none

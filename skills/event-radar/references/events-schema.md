@@ -42,8 +42,8 @@
 
 ## Campos
 
-- `tier`: 1, 2 o 3, según `geography` del perfil.
-- `format`: `expo | conference | meetup | workshop | talk | summit | other`.
+- `tier`: 1 a 4 (los eventos online suelen ir en el tier 1 si el usuario así lo define), según `geography` del perfil.
+- `format`: `expo | conference | meetup | workshop | talk | summit | webinar | other`.
 - `status`: `new → candidate → watching → deep-dive → attending`; o `filtered | skipped | cancelled`.
   - `new`: recién descubierto, sin puntuar.
   - `candidate`: puntuado por el script.
