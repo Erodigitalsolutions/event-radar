@@ -116,7 +116,9 @@ function cmdMerge(a) {
   }
   const out = Array.isArray(db) ? { schema_version: 1, events: list } : { ...db, events: list };
   writeJson(a.events, out);
-  console.log(JSON.stringify({ added, updated, total: list.length, changed_fields: changed }, null, 2));
+  const warnings = list.filter((e) => isDate(e.start_date) && isDate(e.end_date) && e.end_date < e.start_date)
+    .map((e) => `${e.name}: end_date (${e.end_date}) es anterior a start_date (${e.start_date})`);
+  console.log(JSON.stringify({ added, updated, total: list.length, changed_fields: changed, warnings }, null, 2));
 }
 
 // ---------- score ----------
@@ -242,10 +244,72 @@ function cmdReport(a) {
   else process.stdout.write(text);
 }
 
+// ---------- dossier (esqueleto del briefing) ----------
+function cmdDossier(a) {
+  if (!a.events || !a.id) die("uso: dossier --events <events.json> --id <event-id> [--people people.json] [--out dossiers/<id>.md] [--lang en|es]");
+  const lang = a.lang === "es" ? "es" : "en";
+  const ev = eventsOf(readJson(a.events)).find((e) => e.id === a.id);
+  if (!ev) die(`no existe el evento "${a.id}"`);
+  const people = a.people && a.people !== true ? readJson(a.people, []) : [];
+  const t = today(a);
+  const H = lang === "es"
+    ? { brief: "Briefing", prep: "Preparado", status: "Estado", score: "Puntaje", verdict: "Veredicto", glance: "El evento de un vistazo", cost: "Costo y logística", who: "Quién estará", cards: "Personas prioritarias (lista A)", plan: "Plan de acción", sources: "Fuentes", check: "Checklist previo", rec: "Recomendación", dates: "Fechas", place: "Lugar", reg: "Registro hasta", cfs: "Convocatoria de ponentes hasta", confirmed: "Confirmada", candidate: "Candidata", tbd: "Por completar" }
+    : { brief: "Briefing", prep: "Prepared", status: "Status", score: "Score", verdict: "Verdict", glance: "Event at a glance", cost: "Cost & logistics", who: "Who will be there", cards: "Priority people (A list)", plan: "Game plan", sources: "Sources", check: "Pre-event checklist", rec: "Recommendation", dates: "Dates", place: "Place", reg: "Register by", cfs: "Call for speakers until", confirmed: "Confirmed", candidate: "Candidate", tbd: "TO COMPLETE" };
+  const mine = people.filter((p) => !p.event_id || p.event_id === ev.id).sort((x, y) => (y.relevance ?? 0) - (x.relevance ?? 0));
+  const L = [
+    `# ${ev.name} · ${H.brief}`, `_${H.prep} ${t} · ${H.status}: ${ev.status || "?"} · ${H.score}: ${ev.score ?? "n/a"}${ev.label ? " (" + ev.label + ")" : ""}_`, "",
+    `## 1. ${H.verdict}`, `**${H.rec}:** ${H.tbd}`, "",
+    `## 2. ${H.glance}`, `- **${H.dates}:** ${ev.start_date || "TBD"}${ev.end_date && ev.end_date !== ev.start_date ? " → " + ev.end_date : ""}`,
+    `- **${H.place}:** ${[ev.venue, ev.city, ev.country].filter(Boolean).join(", ") || "TBD"} (Tier ${ev.tier ?? "?"})`,
+    `- **Format:** ${ev.format || "?"} · **Organizer:** ${ev.organizer || "?"}`, `- **URL:** ${ev.url || "?"}`, "",
+    `## 3. ${H.cost}`,
+  ];
+  const m = money(ev.cost_estimate);
+  L.push(`- Estimated total: ${m ? m + " (estimate)" : "price not published"}`);
+  for (const p of ev.prices || []) L.push(`- ${p.label}: ${p.currency || ""} ${p.amount}${p.until ? " (until " + p.until + ")" : ""}`);
+  if (ev.registration_deadline) L.push(`- ${H.reg}: ${ev.registration_deadline}`);
+  if (ev.call_for_speakers_deadline) L.push(`- ${H.cfs}: ${ev.call_for_speakers_deadline}`);
+  L.push("", `## 4. ${H.who}`, "", "| Pri | Name | Title | Company | Role | Rel. | Status |", "|---|---|---|---|---|---|---|");
+  for (const p of mine) L.push(`| ${p.priority || "?"} | ${p.name} | ${p.title || ""} | ${p.company || ""} | ${p.role_in_event || ""} | ${p.relevance ?? "?"} | ${p.confirmed ? H.confirmed : H.candidate} |`);
+  if (!mine.length) L.push(`| | ${H.tbd} | | | | | |`);
+  L.push("", `## 5. ${H.cards}`, "");
+  const top = mine.filter((p) => p.priority === "A");
+  for (const p of top) {
+    L.push(`### ${p.name} — ${p.title || ""}, ${p.company || ""} · ${p.confirmed ? H.confirmed : H.candidate}`,
+      `- Why: ${p.why || H.tbd}`, `- Opener: ${p.opener ? '"' + p.opener + '"' : H.tbd}`, `- Question: ${p.question ? '"' + p.question + '"' : H.tbd}`,
+      ...(p.linkedin_url ? [`- Public profile: ${p.linkedin_url}`] : []), `- Sources: ${(p.sources || []).join(" · ") || H.tbd}`, "");
+  }
+  if (!top.length) L.push(H.tbd, "");
+  L.push(`## 6. ${H.plan}`, `- 30s pitch: ${H.tbd}`, `- Top targets / agenda: ${H.tbd}`, "",
+    `## 7. ${H.sources}`, ...[ev.url, ...(ev.sources || [])].filter(Boolean).map((u) => `- ${u}`), "",
+    `## 8. ${H.check}`, "- [ ] Registered (user does this; then set status `attending`)", "- [ ] Travel / lodging", "- [ ] Calendar + reminders", "- [ ] Meetings requested with A-list", "- [ ] CRM sheet updated", "");
+  const text = L.join("\n");
+  if (a.out && a.out !== true) { fs.writeFileSync(a.out, text, "utf8"); console.log(`Dossier escrito en ${a.out}`); } else process.stdout.write(text);
+}
+
+// ---------- contacts (CSV para el CRM) ----------
+function cmdContacts(a) {
+  if (!a.people) die("uso: contacts --people <people.json> [--events events.json] [--min-priority B] [--out contactos.csv]");
+  const people = readJson(a.people);
+  const evs = a.events && a.events !== true ? eventsOf(readJson(a.events, { events: [] })) : [];
+  const order = { A: 0, B: 1, C: 2 };
+  const minP = order[a["min-priority"]] ?? 2;
+  const rows = people.filter((p) => (order[p.priority] ?? 2) <= minP).sort((x, y) => (order[x.priority] ?? 2) - (order[y.priority] ?? 2) || (y.relevance ?? 0) - (x.relevance ?? 0));
+  const head = ["event", "event_date", "priority", "name", "title", "company", "role_in_event", "confirmed", "relevance", "why", "public_profile", "source", "last_checked", "status", "followup_date", "notes"];
+  const out = [head.join(","), ...rows.map((p) => {
+    const ev = evs.find((e) => e.id === p.event_id) || {};
+    return [ev.name || p.event_id, ev.start_date, p.priority, p.name, p.title, p.company, p.role_in_event, p.confirmed ? "yes" : "no", p.relevance, p.why,
+      p.linkedin_url, (p.sources || [])[0], p.last_checked, "to-contact", "", ""].map(csvCell).join(",");
+  })].join("\n") + "\n";
+  if (a.out && a.out !== true) { fs.writeFileSync(a.out, out, "utf8"); console.log(`Contactos escritos en ${a.out} (${rows.length})`); } else process.stdout.write(out);
+}
+
 // ---------- main ----------
 const args = parseArgs(process.argv.slice(2));
 const cmd = args._[0];
 if (cmd === "merge") cmdMerge(args);
 else if (cmd === "score") cmdScore(args);
 else if (cmd === "report") cmdReport(args);
-else die("comandos: merge | score | report");
+else if (cmd === "dossier") cmdDossier(args);
+else if (cmd === "contacts") cmdContacts(args);
+else die("comandos: merge | score | report | dossier | contacts");

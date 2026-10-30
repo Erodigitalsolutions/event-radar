@@ -13,7 +13,7 @@ Agente que encuentra eventos relevantes para la empresa del usuario, los evalúa
 |---|---|---|
 | 1 | Onboarding, perfil, preferencias de entrega/recordatorios/CRM/conectores | **Construida** |
 | 2 | Scan de eventos por tiers + scoring + reporte | **Construida** |
-| 3 | Deep-dive y briefing de expositores/asistentes (fuentes públicas) | Pendiente |
+| 3 | Deep-dive y briefing de expositores/asistentes (fuentes públicas) | **Construida** |
 | 4 | Recordatorios (6/3/1 meses, deadlines), calendario, digest | Pendiente |
 | 5 | CRM, post-evento, aprendizaje por feedback | Pendiente |
 
@@ -56,6 +56,16 @@ Cuando el usuario pida buscar eventos o ver el ranking, y el onboarding esté co
 - `references/scoring-rubric.md`: criterios, pesos y penalizaciones. **Tú asignas sub-puntajes con evidencia; el cálculo lo hace el script.**
 - `references/events-schema.md`: formato de `events.json`.
 - `scripts/event-radar.mjs`: `merge`, `score` y `report` (Node ≥ 18, sin dependencias). Ejecútalo con la ruta absoluta del skill.
+
+## Flujo: Deep-dive y briefing
+
+Cuando el usuario elija un evento para analizar a fondo (o diga "prepárame para X"), sigue `references/deep-dive-workflow.md`. Apoyo:
+
+- `references/people-research-rules.md`: qué se puede y qué no al investigar personas (lectura obligatoria antes de investigar a alguien).
+- `templates/dossier.template.md` y `templates/person-card.template.md`: formato del briefing y de cada ficha.
+- `scripts/event-radar.mjs dossier` genera el esqueleto del briefing; `contacts` exporta el CSV de personas para el CRM.
+
+Reglas específicas: nunca afirmes que alguien asistirá sin fuente; separa *confirmado* de *candidato*; no inicies sesión en LinkedIn ni uses la cuenta del usuario; los mensajes de seguimiento son solo borradores.
 
 ## Reglas permanentes
 

@@ -1,0 +1,8 @@
+[
+  { "event_id": "example-retail-expo-2027", "name": "Alex Example", "title": "VP Operations", "company": "Sample Retail Co.", "role_in_event": "speaker",
+    "confirmed": true, "confirmation_source": "https://retail-expo.example/speakers", "relevance": 9, "priority": "A",
+    "why": "Fictional: decides tech purchases in retail", "opener": "I saw your session on store automation", "question": "What is hardest to automate today?",
+    "sources": ["https://retail-expo.example/speakers"], "last_checked": "2026-10-29" },
+  { "event_id": "example-retail-expo-2027", "name": "Sam Sample", "title": "Marketing Manager", "company": "Demo Brands", "role_in_event": "exhibitor",
+    "confirmed": false, "relevance": 5, "priority": "C", "why": "Fictional, low fit", "sources": ["https://retail-expo.example/exhibitors"], "last_checked": "2026-10-29" }
+]

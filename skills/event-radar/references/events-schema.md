@@ -64,5 +64,7 @@
 | `merge --events events.json --incoming nuevos.json` | Une eventos nuevos sin duplicar (por URL o nombre+año). No pisa `status`, `scores`, `evidence` ni `first_seen`. Reporta cambios de fecha/lugar/deadline. |
 | `score --events events.json --goal <objetivo> [--weights JSON] [--liked "A,B"]` | Calcula `score` y `label`. Descarta eventos pasados. Aplica penalizaciones/bonus de la rúbrica. |
 | `report --events events.json --min-score 60 --format md\|csv --lang es\|en --out archivo` | Genera el reporte. Para otros idiomas: genera en `en` o `es` y traduce el contenido. |
+| `dossier --events events.json --id <id> [--people people.json] [--lang en\|es] [--out file]` | Esqueleto del briefing con datos del evento y personas; lo demás queda como "TO COMPLETE" para que lo rellene la investigación. |
+| `contacts --people people.json [--events events.json] [--min-priority A\|B\|C] [--out file.csv]` | CSV de contactos ordenado por prioridad, listo para el CRM. |
 
 Los reportes en Excel/Word/PDF se producen a partir del CSV/Markdown con las herramientas de documentos disponibles.

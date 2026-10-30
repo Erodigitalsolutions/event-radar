@@ -10,7 +10,7 @@ Plugin/skill de [Claude Code](https://claude.com/claude-code) que encuentra even
 |---|---|---|
 | 1 | Onboarding, perfil, preferencias de entrega / recordatorios / CRM / conectores | ✅ |
 | 2 | Scan por tiers geográficos, scoring y reporte (md / csv → excel, word, correo) | ✅ |
-| 3 | Deep-dive y briefing de expositores y asistentes (fuentes públicas) | ⏳ |
+| 3 | Deep-dive y briefing de expositores y asistentes (fuentes públicas) | ✅ |
 | 4 | Recordatorios 6/3/1 meses, deadlines, calendario, digest y scan programado | ⏳ |
 | 5 | CRM, post-evento, aprendizaje por feedback | ⏳ |
 
@@ -35,6 +35,8 @@ Node ≥ 18, sin dependencias:
 node skills/event-radar/scripts/event-radar.mjs merge  --events events.json --incoming nuevos.json
 node skills/event-radar/scripts/event-radar.mjs score  --events events.json --goal customers
 node skills/event-radar/scripts/event-radar.mjs report --events events.json --min-score 60 --lang es --out reporte.md
+node skills/event-radar/scripts/event-radar.mjs dossier --events events.json --id <event-id> --people people.json --out dossier.md
+node skills/event-radar/scripts/event-radar.mjs contacts --people people.json --events events.json --min-priority B --out contactos.csv
 ```
 
 Hay datos ficticios de prueba en [`examples/`](examples/incoming.example.json).
