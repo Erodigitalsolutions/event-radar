@@ -14,7 +14,7 @@ Agente que encuentra eventos relevantes para la empresa del usuario, los evalúa
 | 1 | Onboarding, perfil, preferencias de entrega/recordatorios/CRM/conectores | **Construida** |
 | 2 | Scan de eventos por tiers + scoring + reporte | **Construida** |
 | 3 | Deep-dive y briefing de expositores/asistentes (fuentes públicas) | **Construida** |
-| 4 | Recordatorios (6/3/1 meses, deadlines), calendario, digest | Pendiente |
+| 4 | Recordatorios (6/3/1 meses, deadlines), calendario (.ics / Google Calendar), digest y scan programado | **Construida** |
 | 5 | CRM, post-evento, aprendizaje por feedback | Pendiente |
 
 Si el usuario pide algo de una fase pendiente: dile que aún no está construida, ofrece el onboarding si falta y apunta qué le faltaría para ejecutar esa fase.
@@ -66,6 +66,10 @@ Cuando el usuario elija un evento para analizar a fondo (o diga "prepárame para
 - `scripts/event-radar.mjs dossier` genera el esqueleto del briefing; `contacts` exporta el CSV de personas para el CRM.
 
 Reglas específicas: nunca afirmes que alguien asistirá sin fuente; separa *confirmado* de *candidato*; no inicies sesión en LinkedIn ni uses la cuenta del usuario; los mensajes de seguimiento son solo borradores.
+
+## Flujo: Recordatorios y automatización
+
+Cuando el usuario siga un evento (`watching`/`deep-dive`/`attending`), cambie su estado, o pida "qué viene", "recuérdame" o "programa el scan", sigue `references/reminders-and-automation.md`. Comandos: `reminders`, `ics`, `digest`. Los eventos pasan a `attending` **solo** cuando el usuario dice que ya se registró. Para crear la tarea programada del scan o cualquier acción persistente fuera de archivos, **pide confirmación antes**.
 
 ## Reglas permanentes
 

@@ -304,6 +304,112 @@ function cmdContacts(a) {
   if (a.out && a.out !== true) { fs.writeFileSync(a.out, out, "utf8"); console.log(`Contactos escritos en ${a.out} (${rows.length})`); } else process.stdout.write(out);
 }
 
+// ---------- reminders / ics / digest ----------
+const FOLLOWED = ["watching", "deep-dive", "attending"];
+const pad = (n) => String(n).padStart(2, "0");
+function addMonths(d, n) {
+  const [y, m, day] = d.split("-").map(Number);
+  const t = new Date(Date.UTC(y, m - 1 + n, 1));
+  const last = new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth() + 1, 0)).getUTCDate();
+  return `${t.getUTCFullYear()}-${pad(t.getUTCMonth() + 1)}-${pad(Math.min(day, last))}`;
+}
+function addDays(d, n) {
+  const t = new Date(d + "T00:00:00Z"); t.setUTCDate(t.getUTCDate() + n);
+  return t.toISOString().slice(0, 10);
+}
+const numList = (v, dflt) => (v && v !== true ? String(v).split(",").map(Number).filter(Number.isFinite) : dflt);
+
+function buildReminders(a, events, t) {
+  const months = numList(a["offsets-months"], [6, 3, 1]);
+  const extraDays = numList(a["extra-days"], []);
+  const regDays = numList(a["registered-days"], []);
+  const dlDays = numList(a["deadline-days"], [14, 3]);
+  const items = [];
+  const push = (e, date, kind, offset, title, details) => {
+    if (!isDate(date)) return;
+    items.push({ key: `${e.id}|${kind}|${offset}|${date}`, date, event_id: e.id, event: e.name, kind, offset, title, details: details || "", url: e.url || "", missed: date < t });
+  };
+  for (const e of events) {
+    if (!FOLLOWED.includes(e.status) || !isDate(e.start_date) || e.start_date < t) continue;
+    const place = [e.city, e.country].filter(Boolean).join(", ");
+    const info = `${e.start_date}${place ? " · " + place : ""}`;
+    for (const n of months) push(e, addMonths(e.start_date, -n), "months-before", n, `${n} month${n > 1 ? "s" : ""} to ${e.name}`, info);
+    for (const n of extraDays) push(e, addDays(e.start_date, -n), "days-before", n, `${n} days to ${e.name}`, info);
+    if (e.status === "attending") for (const n of regDays) push(e, addDays(e.start_date, -n), "days-before", n, `${n} days to ${e.name} (registered)`, info);
+    const dls = [];
+    if (e.status !== "attending" && e.registration_deadline) dls.push(["registration-deadline", e.registration_deadline, "Registration closes"]);
+    if (e.call_for_speakers_deadline) dls.push(["cfs-deadline", e.call_for_speakers_deadline, "Call for speakers closes"]);
+    if (e.status !== "attending") for (const p of e.prices || []) if (p.until) dls.push(["price-deadline", p.until, `${p.label || "Price"} ends (${p.currency || ""} ${p.amount})`]);
+    for (const [kind, date, label] of dls) {
+      if (!isDate(date) || date < t) continue;
+      for (const n of dlDays) push(e, addDays(date, -n), kind, n, `${label} in ${n} days: ${e.name}`, `${label}: ${date}`);
+      push(e, date, kind, 0, `${label} TODAY: ${e.name}`, `${label}: ${date}`);
+    }
+  }
+  return items.sort((x, y) => x.date.localeCompare(y.date) || x.event.localeCompare(y.event));
+}
+
+function loadState(p) { return p && p !== true ? readJson(p, { synced: [] }) : null; }
+
+function cmdReminders(a) {
+  if (!a.events) die("uso: reminders --events <events.json> [--offsets-months 6,3,1] [--extra-days 14] [--registered-days 14,7] [--deadline-days 14,3] [--window-days 60] [--state sync-state.json [--mark-synced]] [--all] [--out file.json]");
+  const t = today(a);
+  let items = buildReminders(a, eventsOf(readJson(a.events)), t);
+  items = items.filter((i) => !i.missed);   // los vencidos no se crean; ver --include-missed
+  if (a["include-missed"]) items = buildReminders(a, eventsOf(readJson(a.events)), t);
+  if (a["window-days"] && a["window-days"] !== true) { const end = addDays(t, Number(a["window-days"])); items = items.filter((i) => i.date <= end); }
+  const st = loadState(a.state);
+  if (st && !a.all) items = items.filter((i) => !st.synced.includes(i.key));
+  if (st && a["mark-synced"]) { st.synced = [...new Set([...st.synced, ...items.map((i) => i.key)])]; writeJson(a.state, st); }
+  const text = JSON.stringify(items, null, 2) + "\n";
+  if (a.out && a.out !== true) { fs.writeFileSync(a.out, text, "utf8"); console.log(`${items.length} recordatorios escritos en ${a.out}`); } else process.stdout.write(text);
+}
+
+const icsEsc = (s) => String(s || "").replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
+const icsDate = (d) => d.replace(/-/g, "");
+function cmdIcs(a) {
+  if (!a.events || !a.out) die("uso: ics --events <events.json> --out <archivo.ics> [mismos flags que reminders]");
+  const t = today(a);
+  const events = eventsOf(readJson(a.events));
+  const items = buildReminders(a, events, t).filter((i) => !i.missed);
+  const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d+/, "");
+  const L = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Event Radar//EN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH"];
+  const add = (uid, date, endDate, summary, desc, alarm) => {
+    L.push("BEGIN:VEVENT", `UID:${uid}@event-radar`, `DTSTAMP:${stamp}`, `DTSTART;VALUE=DATE:${icsDate(date)}`, `DTEND;VALUE=DATE:${icsDate(addDays(endDate, 1))}`,
+      `SUMMARY:${icsEsc(summary)}`, `DESCRIPTION:${icsEsc(desc)}`);
+    if (alarm) L.push("BEGIN:VALARM", "ACTION:DISPLAY", `DESCRIPTION:${icsEsc(summary)}`, "TRIGGER;RELATED=START:PT9H", "END:VALARM");  // 09:00 del mismo dia (evento de dia completo empieza a las 00:00)
+    L.push("END:VEVENT");
+  };
+  for (const e of events) if (FOLLOWED.includes(e.status) && isDate(e.start_date) && e.start_date >= t)
+    add(`ev-${e.id}`, e.start_date, e.end_date || e.start_date, e.name, `${[e.venue, e.city, e.country].filter(Boolean).join(", ")}\n${e.url || ""}`, false);
+  for (const i of items) add(i.key.replace(/[^a-zA-Z0-9-]/g, "_"), i.date, i.date, "⏰ " + i.title, `${i.details}\n${i.url}`, true);
+  L.push("END:VCALENDAR");
+  fs.writeFileSync(a.out, L.join("\r\n") + "\r\n", "utf8");
+  console.log(`${a.out}: ${items.length} recordatorios + eventos seguidos`);
+}
+
+function cmdDigest(a) {
+  if (!a.events) die("uso: digest --events <events.json> [--window-days 60] [--lang en|es] [--out file.md] [flags de reminders]");
+  const lang = a.lang === "es" ? "es" : "en";
+  const t = today(a);
+  const win = Number(a["window-days"] && a["window-days"] !== true ? a["window-days"] : 60);
+  const end = addDays(t, win);
+  const events = eventsOf(readJson(a.events));
+  const followed = events.filter((e) => FOLLOWED.includes(e.status) && isDate(e.start_date) && e.start_date >= t).sort((x, y) => x.start_date.localeCompare(y.start_date));
+  const items = buildReminders(a, events, t).filter((i) => !i.missed && i.date <= end);
+  const D = lang === "es"
+    ? { h: "Qué viene", gen: "Generado", ev: "Eventos que sigues", none: "No sigues eventos todavía. Marca alguno como `watching`.", dl: `Próximos deadlines y avisos (${win} días)`, nodl: "Nada en esta ventana.", status: "Estado", reg: "registrado", watch: "en seguimiento", deep: "análisis a fondo" }
+    : { h: "What's coming", gen: "Generated", ev: "Events you follow", none: "You are not following any events yet. Mark one as `watching`.", dl: `Upcoming deadlines & alerts (${win} days)`, nodl: "Nothing in this window.", status: "Status", reg: "registered", watch: "watching", deep: "deep-dive" };
+  const stl = { attending: D.reg, watching: D.watch, "deep-dive": D.deep };
+  const L = [`# ${D.h}`, `_${D.gen}: ${t}_`, "", `## ${D.ev}`, ""];
+  if (!followed.length) L.push(D.none);
+  else for (const e of followed) L.push(`- **${e.start_date}** — ${e.name} (${[e.city, e.country].filter(Boolean).join(", ") || "TBD"}) · ${D.status}: ${stl[e.status] || e.status}${e.url ? " · " + e.url : ""}`);
+  L.push("", `## ${D.dl}`, "");
+  if (!items.length) L.push(D.nodl); else for (const i of items) L.push(`- **${i.date}** — ${i.title}`);
+  const text = L.join("\n") + "\n";
+  if (a.out && a.out !== true) { fs.writeFileSync(a.out, text, "utf8"); console.log(`Digest escrito en ${a.out}`); } else process.stdout.write(text);
+}
+
 // ---------- main ----------
 const args = parseArgs(process.argv.slice(2));
 const cmd = args._[0];
@@ -312,4 +418,7 @@ else if (cmd === "score") cmdScore(args);
 else if (cmd === "report") cmdReport(args);
 else if (cmd === "dossier") cmdDossier(args);
 else if (cmd === "contacts") cmdContacts(args);
-else die("comandos: merge | score | report | dossier | contacts");
+else if (cmd === "reminders") cmdReminders(args);
+else if (cmd === "ics") cmdIcs(args);
+else if (cmd === "digest") cmdDigest(args);
+else die("comandos: merge | score | report | dossier | contacts | reminders | ics | digest");

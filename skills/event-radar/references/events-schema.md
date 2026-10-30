@@ -66,5 +66,8 @@
 | `report --events events.json --min-score 60 --format md\|csv --lang es\|en --out archivo` | Genera el reporte. Para otros idiomas: genera en `en` o `es` y traduce el contenido. |
 | `dossier --events events.json --id <id> [--people people.json] [--lang en\|es] [--out file]` | Esqueleto del briefing con datos del evento y personas; lo demás queda como "TO COMPLETE" para que lo rellene la investigación. |
 | `contacts --people people.json [--events events.json] [--min-priority A\|B\|C] [--out file.csv]` | CSV de contactos ordenado por prioridad, listo para el CRM. |
+| `reminders --events events.json [--offsets-months 6,3,1] [--registered-days 14,7] [--extra-days N] [--deadline-days 14,3] [--window-days N] [--state f --mark-synced]` | Lista los recordatorios y alertas de deadline de eventos seguidos, sin duplicar los ya sincronizados. |
+| `ics --events events.json --out file.ics` | Calendario importable con eventos seguidos y recordatorios. |
+| `digest --events events.json [--window-days 60] [--lang en\|es] [--out file.md]` | Resumen "qué viene". |
 
 Los reportes en Excel/Word/PDF se producen a partir del CSV/Markdown con las herramientas de documentos disponibles.
