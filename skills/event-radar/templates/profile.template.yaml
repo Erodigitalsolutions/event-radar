@@ -47,7 +47,7 @@ geography:
   max_travel_days_per_year: null
   needs_visa_check: null
 
-budget:
+budget:                       # el presupuesto NUNCA descarta eventos: es un aliciente y una nota de estiramiento
   currency: null
   per_event_max: null           # tope unico, o usar per_event_max_by_tier
   per_event_max_by_tier: { tier1: null, tier2: null, tier3: null, tier4: null }
@@ -73,7 +73,7 @@ scan:
   day_and_time: null          # ej. "lunes 08:00"
   timezone: null
   horizon_months: 12          # cuanto a futuro buscar
-  min_score_to_report: 60
+  min_score_to_report: 0     # 0 = mostrar todo lo valorado
   sources_extra: []           # URLs/calendarios que el usuario ya sigue
 
 reports:

@@ -10,7 +10,7 @@ Cada evento recibe 7 sub-puntajes de **0 a 10**. El puntaje final es el promedio
 | `audience` | Calidad de audiencia | Público ajeno o no declarado | Mezcla, parte son decisores del perfil | Mayoría decisores del cliente/socio ideal, verificable |
 | `people` | Expositores y ponentes relevantes | Ninguno de su lista ni de su perfil | Algunos relevantes | Varios de `companies_to_meet`/`roles_to_meet` confirmados |
 | `credibility` | Historia y credibilidad | Primera edición sin respaldo / señales de mala reputación | Edición 2–3, organizador conocido | 5+ ediciones, organizador reconocido, buenas reseñas |
-| `cost` | Costo total vs. presupuesto | Excede el máximo por evento | Cerca del máximo | Muy por debajo y con alto retorno esperado |
+| `cost` | Costo total vs. presupuesto (solo aliciente, peso bajo) | Muy por encima del tope (el usuario puede estirarlo) | Cerca del tope | Muy por debajo del tope |
 | `logistics` | Logística | Vuelo largo, visa, muchos días fuera | Un traslado razonable | En su ciudad / sin hotel ni vuelo |
 | `timing` | Calendario y deadlines | Choca con fechas bloqueadas / deadline vencido | Fecha ok, poco margen | Fecha libre y early-bird vigente |
 
@@ -18,11 +18,10 @@ Cada evento recibe 7 sub-puntajes de **0 a 10**. El puntaje final es el promedio
 
 - **Sin evidencia, no hay nota alta.** Si no pudiste verificar un criterio, asigna `5` y marca `unverified: ["<clave>"]`. Nunca inventes asistentes, precios ni reseñas.
 - **Guarda la evidencia:** cada sub-puntaje lleva una frase corta y la URL de donde sale (`evidence`).
-- **Filtros duros (descartan antes de puntuar):**
+- **Filtros duros (descartan antes de puntuar). El presupuesto NUNCA es filtro duro:**
   - Fecha ya pasada.
   - Coincide con una fecha bloqueada en `preferences.constraints`.
   - Tema en `topics.exclude`.
-  - Costo mínimo estimado > `budget.per_event_max` × 2.
   Registra estos como `status: "filtered"` con `filtered_reason`.
 - **Penalizaciones** (se aplican después del promedio, ya codificadas en el script):
   - Deadline de registro vencido pero evento futuro: −5.
@@ -35,17 +34,17 @@ Pesos base (suman 100):
 
 | fit | audience | people | credibility | cost | logistics | timing |
 |---|---|---|---|---|---|---|
-| 25 | 20 | 15 | 10 | 15 | 10 | 5 |
+| 30 | 25 | 15 | 10 | 5 | 10 | 5 |
 
 Ajustes por objetivo #1 del usuario (suma 100 después de normalizar; el script normaliza):
 
-- `customers`: audience +10, people +5, credibility −5, timing −5, cost −5
-- `partners`: people +10, audience +5, cost −5, logistics −5, timing −5
+- `customers`: audience +10, people +5, credibility −5, timing −5
+- `partners`: people +10, audience +5, logistics −5, timing −5
 - `suppliers`: people +10, fit +5, credibility −5, audience −5, timing −5
-- `investors`: audience +10, people +10, cost −10, logistics −5, timing −5
+- `investors`: audience +10, people +10, logistics −5, timing −5
 - `learning`: fit +10, credibility +5, people −5, audience −5, timing −5
-- `brand`: audience +10, credibility +5, cost −5, people −5, logistics −5
-- `hiring`: audience +10, fit +5, credibility −5, cost −5, timing −5
+- `brand`: audience +10, credibility +5, people −5, logistics −5
+- `hiring`: audience +10, fit +5, credibility −5, timing −5
 
 El usuario puede fijar sus propios pesos en `scoring_weights` del perfil; si existe, tiene prioridad.
 
@@ -56,13 +55,14 @@ El usuario puede fijar sus propios pesos en `scoring_weights` del perfil; si exi
 | 85–100 | Imperdible |
 | 70–84 | Muy recomendado |
 | 60–69 | Vale la pena considerar |
-| < 60 | No se reporta (queda en la base) |
+| < 60 | Sin etiqueta (se muestra igual) |
 
-El umbral de reporte sale de `scan.min_score_to_report`.
+El reporte de la Fase 3 muestra **todos** los valorados, ordenados por puntaje (`--min-score` es opcional). Las etiquetas son orientativas.
 
 ## Costo total estimado
 
 `total = entrada + vuelo + hotel + comidas + traslado local` (según `budget.covers`).
 - Entrada: precio real publicado; si hay tramos (early-bird/regular/late), guarda todos con su fecha límite.
 - Vuelo/hotel/comidas: **estimación**, rotulada como tal con rango (min–max) y moneda. Si el evento es del Tier 1, vuelo y hotel = 0.
+- Si el costo supera el tope del tier, el reporte lo marca como "estiramiento"; no baja el evento de fase ni lo oculta.
 - Si no hay precio publicado: `price_known: false` y no compares contra presupuesto como si fuera exacto.

@@ -12,15 +12,16 @@
 import fs from "node:fs";
 
 const KEYS = ["fit", "audience", "people", "credibility", "cost", "logistics", "timing"];
-const BASE = { fit: 25, audience: 20, people: 15, credibility: 10, cost: 15, logistics: 10, timing: 5 };
+// El presupuesto es solo un aliciente (peso bajo); nunca descarta un evento.
+const BASE = { fit: 30, audience: 25, people: 15, credibility: 10, cost: 5, logistics: 10, timing: 5 };
 const GOAL_ADJ = {
-  customers: { audience: 10, people: 5, credibility: -5, timing: -5, cost: -5 },
-  partners: { people: 10, audience: 5, cost: -5, logistics: -5, timing: -5 },
+  customers: { audience: 10, people: 5, credibility: -5, timing: -5 },
+  partners: { people: 10, audience: 5, logistics: -5, timing: -5 },
   suppliers: { people: 10, fit: 5, credibility: -5, audience: -5, timing: -5 },
-  investors: { audience: 10, people: 10, cost: -10, logistics: -5, timing: -5 },
+  investors: { audience: 10, people: 10, logistics: -5, timing: -5 },
   learning: { fit: 10, credibility: 5, people: -5, audience: -5, timing: -5 },
-  brand: { audience: 10, credibility: 5, cost: -5, people: -5, logistics: -5 },
-  hiring: { audience: 10, fit: 5, credibility: -5, cost: -5, timing: -5 },
+  brand: { audience: 10, credibility: 5, people: -5, logistics: -5 },
+  hiring: { audience: 10, fit: 5, credibility: -5, timing: -5 },
 };
 const LABELS = {
   es: { top: "Imperdible", high: "Muy recomendado", mid: "Vale la pena considerar" },
@@ -32,7 +33,7 @@ const T = {
     none: "No hay eventos por encima del umbral.", when: "Fecha", where: "Lugar", tier: "Tier", cost: "Costo estimado",
     score: "Puntaje", breakdown: "Desglose", why: "Por qué", unverified: "No verificado", link: "Enlace",
     event: "Evento", label: "Etiqueta", reg: "Registro hasta", cfs: "Convocatoria de ponentes hasta",
-    estimate: "estimado", priceUnknown: "precio no publicado", noDeadlines: "Sin deadlines próximos.",
+    stretch: "Presupuesto", stretchTxt: "por encima del tope del tier (estiramiento posible, tú decides):", estimate: "estimado", priceUnknown: "precio no publicado", noDeadlines: "Sin deadlines próximos.",
     criteria: { fit: "Alineación", audience: "Audiencia", people: "Ponentes", credibility: "Credibilidad", cost: "Costo", logistics: "Logística", timing: "Timing" },
   },
   en: {
@@ -40,7 +41,7 @@ const T = {
     none: "No events above the threshold.", when: "Date", where: "Location", tier: "Tier", cost: "Estimated cost",
     score: "Score", breakdown: "Breakdown", why: "Why", unverified: "Unverified", link: "Link",
     event: "Event", label: "Label", reg: "Register by", cfs: "Call for speakers until",
-    estimate: "estimate", priceUnknown: "price not published", noDeadlines: "No upcoming deadlines.",
+    stretch: "Budget", stretchTxt: "above the tier cap (stretch is your call):", estimate: "estimate", priceUnknown: "price not published", noDeadlines: "No upcoming deadlines.",
     criteria: { fit: "Fit", audience: "Audience", people: "Speakers", credibility: "Credibility", cost: "Cost", logistics: "Logistics", timing: "Timing" },
   },
 };
@@ -85,7 +86,8 @@ const PROTECTED = new Set(["status", "scores", "evidence", "first_seen", "score"
 
 function sameEvent(a, b) {
   const ua = urlKey(a.url), ub = urlKey(b.url);
-  if (ua && ub && ua === ub) return true;
+  // Misma URL: solo es el mismo evento si el nombre coincide (una página puede listar varios eventos).
+  if (ua && ub && ua === ub && (norm(a.name) === norm(b.name) || !a.name || !b.name)) return true;
   const ya = (a.start_date || "").slice(0, 4), yb = (b.start_date || "").slice(0, 4);
   return norm(a.name) !== "" && norm(a.name) === norm(b.name) && (!ya || !yb || ya === yb);
 }
@@ -177,7 +179,7 @@ function cmdScore(a) {
     if (!e.scores) { out.skipped_no_scores++; continue; }
     const r = scoreEvent(e, w, liked, t);
     e.score = r.score; e.label = labelFor(r.score, lang); e.unverified = r.unverified; e.score_notes = r.notes;
-    if (e.status === "new") e.status = "candidate";
+    if (["new", "shortlisted"].includes(e.status)) e.status = "candidate";
     out.scored++;
   }
   writeJson(a.events, Array.isArray(db) ? { schema_version: 1, events: list } : db);
@@ -197,7 +199,9 @@ function cmdReport(a) {
   if (!a.events) die("uso: report --events <events.json> [--min-score 60] [--format md|csv] [--lang es|en] [--out file]");
   const lang = a.lang === "en" ? "en" : "es";
   const tr = T[lang];
-  const min = a["min-score"] ? Number(a["min-score"]) : 60;
+  const min = a["min-score"] ? Number(a["min-score"]) : 0;
+  let caps = null;
+  if (a.caps && a.caps !== true) { try { caps = JSON.parse(a.caps); } catch { die("--caps no es JSON válido, ej. '{\"1\":150,\"2\":600}'"); } }
   const t = today(a);
   const all = eventsOf(readJson(a.events));
   const rows = all.filter((e) => typeof e.score === "number" && e.score >= min && !["filtered", "cancelled", "skipped"].includes(e.status))
@@ -221,6 +225,8 @@ function cmdReport(a) {
         L.push(`- **${tr.where}:** ${[e.venue, e.city, e.country].filter(Boolean).join(", ") || "TBD"} · ${tr.tier} ${e.tier ?? "?"}`);
         const m = money(e.cost_estimate);
         L.push(`- **${tr.cost}:** ${m ? m + " (" + tr.estimate + ")" : tr.priceUnknown}`);
+        const cap = caps?.[e.tier];
+        if (cap != null && e.cost_estimate?.min != null && e.cost_estimate.min > cap) L.push(`- **${tr.stretch}:** ${tr.stretchTxt} ${cap}`);
         if (e.registration_deadline) L.push(`- **${tr.reg}:** ${e.registration_deadline}`);
         if (e.call_for_speakers_deadline) L.push(`- **${tr.cfs}:** ${e.call_for_speakers_deadline}`);
         if (e.scores) L.push(`- **${tr.breakdown}:** ` + KEYS.map((k) => `${tr.criteria[k]} ${e.scores[k] ?? "?"}`).join(" · "));
@@ -243,6 +249,49 @@ function cmdReport(a) {
   }
   if (a.out && a.out !== true) { fs.writeFileSync(a.out, text, "utf8"); console.log(`Reporte escrito en ${a.out} (${rows.length} eventos)`); }
   else process.stdout.write(text);
+}
+
+// ---------- longlist (fase 1 -> 2) y status ----------
+const STATUSES = ["new", "shortlisted", "candidate", "watching", "deep-dive", "attending", "attended", "skipped", "filtered", "cancelled"];
+const isOnline = (e) => e.online === true || e.format === "webinar" || /^online$/i.test(e.city || "");
+
+function cmdLonglist(a) {
+  if (!a.events) die("uso: longlist --events <events.json> [--status new,shortlisted] [--lang en|es] [--format md|csv] [--out file]");
+  const lang = a.lang === "es" ? "es" : "en";
+  const st = (a.status && a.status !== true ? a.status : "new").split(",");
+  const t = today(a);
+  const rank = { high: 0, medium: 1, low: 2 };
+  const rows = eventsOf(readJson(a.events)).filter((e) => st.includes(e.status) && !(isDate(e.end_date || e.start_date) && (e.end_date || e.start_date) < t))
+    .sort((x, y) => (x.tier ?? 9) - (y.tier ?? 9) || (rank[x.match] ?? 3) - (rank[y.match] ?? 3) || String(x.start_date || "9999").localeCompare(String(y.start_date || "9999")));
+  const where = (e) => (isOnline(e) ? "Online" : [e.city, e.country].filter(Boolean).join(", ") || "TBD");
+  let text;
+  if ((a.format || "md") === "csv") {
+    text = ["id,tier,name,match,match_reason,start_date,end_date,where,format,url", ...rows.map((e) => [e.id, e.tier, e.name, e.match, e.match_reason, e.start_date, e.end_date, where(e), e.format, e.url].map(csvCell).join(","))].join("\n") + "\n";
+  } else {
+    const H = lang === "es" ? { h: "Lista larga (todo lo que podría encajar)", n: "eventos", tier: "Tier", online: "Online / webinars", m: "Encaje", none: "Nada pendiente." } : { h: "Long list (everything that could match)", n: "events", tier: "Tier", online: "Online / webinars", m: "Match", none: "Nothing pending." };
+    const L = [`# ${H.h}`, `_${t} · ${rows.length} ${H.n}_`, ""];
+    if (!rows.length) L.push(H.none);
+    const groups = [...new Set(rows.map((e) => (isOnline(e) ? "online" : e.tier ?? "?")))];
+    for (const g of groups.sort((x, y) => (x === "online") - (y === "online") || String(x).localeCompare(String(y)))) {
+      L.push(g === "online" ? `## ${H.online}` : `## ${H.tier} ${g}`, "", `| id | Event | ${H.m} | Date | Where |`, "|---|---|---|---|---|");
+      for (const e of rows.filter((r) => (isOnline(r) ? "online" : r.tier ?? "?") === g))
+        L.push(`| ${e.id} | [${e.name}](${e.url || ""}) | ${e.match || "?"}${e.match_reason ? " — " + e.match_reason : ""} | ${e.start_date || "TBD"} | ${where(e)} |`);
+      L.push("");
+    }
+    text = L.join("\n");
+  }
+  if (a.out && a.out !== true) { fs.writeFileSync(a.out, text, "utf8"); console.log(`Lista escrita en ${a.out} (${rows.length})`); } else process.stdout.write(text);
+}
+
+function cmdStatus(a) {
+  if (!a.events || !a.ids || !a.set) die("uso: status --events <events.json> --ids id1,id2 --set shortlisted|watching|deep-dive|skipped|...");
+  if (!STATUSES.includes(a.set)) die(`--set debe ser uno de: ${STATUSES.join(", ")}`);
+  const db = readJson(a.events); const list = eventsOf(db);
+  const ids = String(a.ids).split(",").map((s) => s.trim()).filter(Boolean);
+  const changed = [], missing = [];
+  for (const id of ids) { const e = list.find((x) => x.id === id); if (!e) { missing.push(id); continue; } changed.push(`${id}: ${e.status} -> ${a.set}`); e.status = a.set; }
+  writeJson(a.events, Array.isArray(db) ? { schema_version: 1, events: list } : db);
+  console.log(JSON.stringify({ changed, missing }, null, 2));
 }
 
 // ---------- dossier (esqueleto del briefing) ----------
@@ -588,8 +637,10 @@ else if (cmd === "contacts") cmdContacts(args);
 else if (cmd === "reminders") cmdReminders(args);
 else if (cmd === "ics") cmdIcs(args);
 else if (cmd === "digest") cmdDigest(args);
+else if (cmd === "longlist") cmdLonglist(args);
+else if (cmd === "status") cmdStatus(args);
 else if (cmd === "crm") cmdCrm(args);
 else if (cmd === "outcome") cmdOutcome(args);
 else if (cmd === "post-event") cmdPostEvent(args);
 else if (cmd === "learn") cmdLearn(args);
-else die("comandos: merge | score | report | dossier | contacts | reminders | ics | digest | crm | outcome | post-event | learn");
+else die("comandos: merge | score | report | dossier | contacts | reminders | ics | digest | longlist | status | crm | outcome | post-event | learn");

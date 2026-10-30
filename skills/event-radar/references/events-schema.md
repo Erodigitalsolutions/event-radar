@@ -44,11 +44,13 @@
 
 - `tier`: 1 a 4 (los eventos online suelen ir en el tier 1 si el usuario así lo define), según `geography` del perfil.
 - `format`: `expo | conference | meetup | workshop | talk | summit | webinar | other`.
-- `status`: `new → candidate → watching → deep-dive → attending → attended`; o `filtered | skipped | cancelled`.
-  - `new`: recién descubierto, sin puntuar.
-  - `candidate`: puntuado por el script.
+- `status`: `new → shortlisted → candidate → watching → deep-dive → attending → attended`; o `filtered | skipped | cancelled`.
+  - `new`: en la lista larga (Fase 1), sin puntuar.
+  - `shortlisted`: el usuario lo preseleccionó (Fase 2).
+  - `candidate`: valorado y puntuado por el script (Fase 3), esperando la selección final.
   - `watching`/`deep-dive`/`attending`/`skipped`/`attended`: decisiones del usuario (`attended`/`skipped` los fija `outcome`). **No los cambies tú sin que él lo diga.**
   - `filtered`: descartado por filtro duro (`filtered_reason`).
+- `online`: `true` para webinars y eventos virtuales (se agrupan aparte en `longlist`). `match`: `high|medium|low` y `match_reason`: encaje rápido de la Fase 1.
 - `confidence`: `high` (página oficial del organizador) | `medium` | `low` (solo agregador).
 - `scores`: 0–10 por criterio de `scoring-rubric.md`. `null` si no se evaluó.
 - `evidence[k]`: justificación corta + URL. Sin evidencia no se sube de 5.
@@ -63,8 +65,10 @@
 | Comando | Qué hace |
 |---|---|
 | `merge --events events.json --incoming nuevos.json` | Une eventos nuevos sin duplicar (por URL o nombre+año). No pisa `status`, `scores`, `evidence` ni `first_seen`. Reporta cambios de fecha/lugar/deadline. |
-| `score --events events.json --goal <objetivo> [--weights JSON] [--liked "A,B"]` | Calcula `score` y `label`. Descarta eventos pasados. Aplica penalizaciones/bonus de la rúbrica. |
-| `report --events events.json --min-score 60 --format md\|csv --lang es\|en --out archivo` | Genera el reporte. Para otros idiomas: genera en `en` o `es` y traduce el contenido. |
+| `longlist --events events.json [--status new,shortlisted] [--lang] [--format md|csv] [--out f]` | Lista larga agrupada (Online / Tier 1..4) con encaje; base de la preselección. |
+| `status --events events.json --ids a,b --set <estado>` | Cambia el estado de varios eventos (preselección, seguir, descartar). |
+| `score --events events.json --goal <objetivo> [--weights JSON] [--liked "A,B"]` | Calcula `score` y `label` (pasa `new`/`shortlisted` con scores a `candidate`). Descarta eventos pasados. Aplica penalizaciones/bonus de la rúbrica. |
+| `report --events events.json [--min-score 0] [--caps '{"1":150}'] --format md|csv --lang es|en --out archivo` | Reporte de todos los valorados (`--caps` solo añade la nota de estiramiento). Para otros idiomas: genera en `en` o `es` y traduce. |
 | `dossier --events events.json --id <id> [--people people.json] [--lang en\|es] [--out file]` | Esqueleto del briefing con datos del evento y personas; lo demás queda como "TO COMPLETE" para que lo rellene la investigación. |
 | `contacts --people people.json [--events events.json] [--min-priority A\|B\|C] [--out file.csv]` | CSV de contactos ordenado por prioridad, listo para el CRM. |
 | `reminders --events events.json [--offsets-months 6,3,1] [--registered-days 14,7] [--extra-days N] [--deadline-days 14,3] [--window-days N] [--state f --mark-synced]` | Lista los recordatorios y alertas de deadline de eventos seguidos, sin duplicar los ya sincronizados. |

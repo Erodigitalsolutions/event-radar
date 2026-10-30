@@ -23,6 +23,7 @@ Genera las consultas desde el perfil, por tier:
 "call for speakers" "<tema>" <año>
 ```
 
+- **Siempre una pasada de webinars y eventos online**: `"<tema>" webinar|virtual summit|online conference <año>`, calendarios de asociaciones del sector, Eventbrite/Luma en modo online, series recurrentes de proveedores y cámaras. Márcalos `online: true`.
 - Usa los años actual y siguiente, dentro de `scan.horizon_months`.
 - Varía idioma de búsqueda según `preferences.event_language` y los mercados del usuario.
 - Haz varias búsquedas específicas en lugar de una amplia. Búsquedas independientes se lanzan en paralelo.

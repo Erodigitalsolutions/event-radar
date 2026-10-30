@@ -48,14 +48,14 @@ Lee `references/onboarding-questionnaire.md` y síguelo. Puntos clave:
 5. Guarda por bloques en `profile.yaml` usando `templates/profile.template.yaml` como esquema. Añade `onboarding_completed: true` solo tras confirmación del usuario.
 6. Cierra con resumen del perfil, lista de pendientes y la oferta de la siguiente fase.
 
-## Flujo: Scan y ranking
+## Flujo: Scan en 4 fases
 
-Cuando el usuario pida buscar eventos o ver el ranking, y el onboarding esté completo, sigue `references/scan-workflow.md`. Archivos de apoyo:
+Cuando el usuario pida buscar eventos, y el onboarding esté completo, sigue `references/scan-workflow.md`: (1) lista larga con TODO lo que pueda encajar, incluidos webinars y eventos online siempre; (2) el usuario preselecciona; (3) búsqueda profunda y valoración de los preseleccionados; (4) el usuario elige a quién seguir y empieza el análisis a fondo. **El presupuesto nunca descarta eventos**, solo es un aliciente y una nota. Comandos nuevos: `longlist`, `status`. Archivos de apoyo:
 
 - `references/sources.md`: dónde buscar, consultas, verificación y límites.
 - `references/scoring-rubric.md`: criterios, pesos y penalizaciones. **Tú asignas sub-puntajes con evidencia; el cálculo lo hace el script.**
 - `references/events-schema.md`: formato de `events.json`.
-- `scripts/event-radar.mjs`: `merge`, `score` y `report` (Node ≥ 18, sin dependencias). Ejecútalo con la ruta absoluta del skill.
+- `scripts/event-radar.mjs`: `merge`, `longlist`, `status`, `score` y `report` (Node ≥ 18, sin dependencias). Ejecútalo con la ruta absoluta del skill.
 
 ## Flujo: Deep-dive y briefing
 
