@@ -95,6 +95,11 @@ reminders:
   digest_frequency: null      # weekly | biweekly | monthly | none
   quiet_hours: null
 
+environment:                   # lo rellena la revision de entorno (references/setup-check.md)
+  mode: null                  # script | manual
+  checked: null
+  data_dir: null              # solo si no se puede usar ~/.event-radar/
+
 automation:                    # autorizaciones de entrega (ver references/delivery-and-sync.md); null = preguntar una vez
   sheet: null                 # create | update_only | off
   calendar: null              # on | off

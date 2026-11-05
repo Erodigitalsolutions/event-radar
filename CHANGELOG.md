@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.2.0
+- Non-technical onboarding: environment check that installs Node with the user's permission or falls back to a manual mode with the same flow; plain-language GETTING-STARTED guide in English and Spanish.
+
 ## 1.1.0
 - Automatic delivery at the end of each phase: new `export` command builds an Excel workbook (Events, Prices, Timeline, Scores, Contacts) plus CSV/JSON, report, `.ics` and digest, with a dependency-free xlsx writer.
 - Delivery guide: create or update the Google Sheet (preserving user edits), sync calendar reminders and deadlines, email the report to yourself — driven by new `automation` settings asked once in onboarding (block 11).

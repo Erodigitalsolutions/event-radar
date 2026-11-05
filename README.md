@@ -4,6 +4,8 @@ A [Claude Code](https://claude.com/claude-code) plugin (it ships one skill) that
 
 > Public sources only. It never pays for or registers you for anything. Works without connectors; with them it can use your calendar, email and sheets.
 
+> **Not technical?** Start with [GETTING-STARTED.md](GETTING-STARTED.md) (English and Spanish, no jargon). Claude checks your computer, installs what's missing with your permission, or runs in a no-install manual mode.
+
 ## Install
 
 In Claude Code:
@@ -13,7 +15,7 @@ In Claude Code:
 /plugin install event-radar@event-radar
 ```
 
-Or copy `skills/event-radar` into your own skills folder. Requirements: Claude Code and Node.js ≥ 18 (the helper script has no dependencies).
+Or copy `skills/event-radar` into your own skills folder. Requirements: Claude Code. Node.js ≥ 18 runs the helper script; if it's missing, Claude offers to install it or continues in manual mode ([setup-check.md](skills/event-radar/references/setup-check.md)).
 
 ## First run
 

@@ -33,6 +33,7 @@ Directorio de datos: el elegido en el onboarding; por defecto `~/.event-radar/`.
 
 ## Al iniciar cualquier sesión
 
+0. **Entorno:** si el perfil no tiene `environment.checked` (o algo falla), sigue `references/setup-check.md`: revisa si Node 18+ está disponible y, si no, lo instalas con su OK o sigues en modo manual. El usuario puede no ser técnico: nunca le pidas abrir una terminal; habla en palabras simples.
 1. Busca `<data>/profile.yaml`.
 2. Si no existe, o `onboarding_completed` no es `true`, ofrece el **onboarding**.
 3. Si existe, lee el perfil y úsalo en todo lo demás sin volver a preguntar.
