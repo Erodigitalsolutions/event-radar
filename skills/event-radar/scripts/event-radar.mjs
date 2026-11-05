@@ -82,6 +82,7 @@ const eventsOf = (db) => (Array.isArray(db) ? db : db.events || []);
 const isDate = (d) => typeof d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d);
 
 // ---------- merge ----------
+const RESEARCH = new Set(["scores", "evidence", "unverified"]);
 const PROTECTED = new Set(["status", "scores", "evidence", "first_seen", "score", "label", "filtered_reason", "notes", "unverified", "outcome"]);
 
 function sameEvent(a, b) {
@@ -93,7 +94,7 @@ function sameEvent(a, b) {
 }
 
 function cmdMerge(a) {
-  if (!a.events || !a.incoming) die("uso: merge --events <events.json> --incoming <nuevos.json>");
+  if (!a.events || !a.incoming) die("uso: merge --events <events.json> --incoming <nuevos.json> [--refresh]");
   const db = readJson(a.events, { schema_version: 1, events: [] });
   const list = eventsOf(db);
   const incoming = eventsOf(readJson(a.incoming));
@@ -107,7 +108,10 @@ function cmdMerge(a) {
       added++;
     } else {
       for (const [k, v] of Object.entries(inc)) {
-        if (PROTECTED.has(k) || v === null || v === undefined || v === "") continue;
+        if (v === null || v === undefined || v === "") continue;
+        // Campos de investigacion: se completan si faltan; con --refresh (Fase 3) se reemplazan. Las decisiones del usuario nunca.
+        const research = RESEARCH.has(k) && (a.refresh || match[k] == null || (Array.isArray(match[k]) && !match[k].length));
+        if (PROTECTED.has(k) && !research) continue;
         if (JSON.stringify(match[k]) !== JSON.stringify(v)) {
           if (["start_date", "end_date", "city", "venue", "registration_deadline"].includes(k) && match[k]) changed.push(`${match.name}: ${k} ${match[k]} → ${v}`);
           match[k] = v;
@@ -176,6 +180,8 @@ function cmdScore(a) {
     const end = e.end_date || e.start_date;
     if (isDate(end) && end < t) { e.status = "filtered"; e.filtered_reason = "past"; out.filtered_past++; continue; }
     if (e.status === "filtered") continue;
+    // Fase 3: solo se valoran los preseleccionados (o los ya valorados); --include-new puntua tambien la lista larga.
+    if (e.status === "new" && !a["include-new"]) { out.left_in_longlist = (out.left_in_longlist || 0) + 1; continue; }
     if (!e.scores) { out.skipped_no_scores++; continue; }
     const r = scoreEvent(e, w, liked, t);
     e.score = r.score; e.label = labelFor(r.score, lang); e.unverified = r.unverified; e.score_notes = r.notes;
@@ -204,7 +210,7 @@ function cmdReport(a) {
   if (a.caps && a.caps !== true) { try { caps = JSON.parse(a.caps); } catch { die("--caps no es JSON válido, ej. '{\"1\":150,\"2\":600}'"); } }
   const t = today(a);
   const all = eventsOf(readJson(a.events));
-  const rows = all.filter((e) => typeof e.score === "number" && e.score >= min && !["filtered", "cancelled", "skipped"].includes(e.status))
+  const rows = all.filter((e) => typeof e.score === "number" && e.score >= min && !["new", "filtered", "cancelled", "skipped"].includes(e.status))
     .sort((x, y) => y.score - x.score);
 
   let text;

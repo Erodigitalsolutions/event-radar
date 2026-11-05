@@ -1,7 +1,10 @@
 {
   "name": "event-radar",
-  "version": "0.1.0",
-  "description": "Descubre, puntúa y prepara eventos (conferencias, ferias, charlas) alineados con tu empresa. Fase 1: onboarding y perfil.",
-  "author": { "name": "Event Radar" },
-  "keywords": ["events", "conferences", "networking", "research", "reminders"]
+  "version": "1.0.0",
+  "description": "Finds, scores and prepares you for events (conferences, expos, webinars) that match your business. Onboarding, 4-phase scan, deep dives, reminders, CRM and post-event learning. Public sources only; never handles payments.",
+  "author": { "name": "Ero Digital Solutions", "url": "https://github.com/Erodigitalsolutions" },
+  "homepage": "https://github.com/Erodigitalsolutions/event-radar",
+  "repository": "https://github.com/Erodigitalsolutions/event-radar",
+  "license": "MIT",
+  "keywords": ["events", "conferences", "webinars", "networking", "research", "reminders", "crm", "lead-generation"]
 }

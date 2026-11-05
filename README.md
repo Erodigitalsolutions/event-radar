@@ -1,74 +1,88 @@
 # Event Radar
 
-Plugin/skill de [Claude Code](https://claude.com/claude-code) que encuentra eventos relevantes para tu empresa (conferencias, ferias, charlas, meetups), los puntúa según tu perfil, te prepara para asistir y te recuerda los deadlines.
+A [Claude Code](https://claude.com/claude-code) plugin (it ships one skill) that finds events worth your time — conferences, expos, talks, **and webinars/online events** — scores them against your business, prepares you to attend, reminds you of deadlines and keeps a simple CRM of the people you meet.
 
-> Fuentes públicas únicamente. Nunca paga ni te registra. Funciona sin conectores.
+> Public sources only. It never pays for or registers you for anything. Works without connectors; with them it can use your calendar, email and sheets.
 
-## Estado
+## Install
 
-| Fase | Contenido | Estado |
+In Claude Code:
+
+```
+/plugin marketplace add Erodigitalsolutions/event-radar
+/plugin install event-radar@event-radar
+```
+
+Or copy `skills/event-radar` into your own skills folder. Requirements: Claude Code and Node.js ≥ 18 (the helper script has no dependencies).
+
+## First run
+
+1. Say **"set up my Event Radar"**. A short questionnaire learns your business, markets, goals, geography tiers, budget, how you want results delivered (language, email, Excel…), reminders and tools. You can answer in another assistant with [this prompt](skills/event-radar/references/external-llm-prompt.md) and paste the result.
+2. Say **"find events"**. The scan runs in four steps and waits for you between them.
+
+Your data (profile, event database, reports, dossiers) lives in `~/.event-radar/`, never in this repo.
+
+## How a scan works
+
+| Phase | What happens | You |
 |---|---|---|
-| 1 | Onboarding, perfil, preferencias de entrega / recordatorios / CRM / conectores | ✅ |
-| 2 | Scan en 4 fases (lista larga → preselección → valoración → selección final), incluye webinars/online; el presupuesto nunca descarta | ✅ |
-| 3 | Deep-dive y briefing de expositores y asistentes (fuentes públicas) | ✅ |
-| 4 | Recordatorios 6/3/1 meses, deadlines, calendario (.ics / Google Calendar), digest y scan programado | ✅ |
-| 5 | CRM (hoja simple), post-evento con seguimiento, ROI y aprendizaje por feedback | ✅ |
+| 1. Long list | Everything that could match, by tier (local → rest of country → neighbouring country → international) plus a webinars/online group. Includes expensive and far-away events. | read it |
+| 2. Shortlist | | pick the ones that interest you |
+| 3. Valuation | Official pages checked: dates, venue, prices and deadlines, organizer, attendance, speakers, exhibitors. Seven scores with evidence and links; unknowns are flagged, not invented. | read the ranked table |
+| 4. Final selection | Follow (`watching`) or analyse in depth (`deep-dive`): dossier with exhibitors, speakers and attendee research from public pages, briefing "as if you knew everyone". | decide |
 
-## Uso rápido
+**Budget is only a nudge.** It has a small weight in the score and the report adds a "stretch" note when an event is above your per-tier cap — it never hides or drops an event. If an event fits 100% you can still choose to make the effort.
 
-1. Instala el plugin (o copia `skills/event-radar` a tu carpeta de skills).
-2. Pídele a Claude: **"configura mi Event Radar"**.
-   - Opcional: responde el cuestionario en otro asistente con [el prompt externo](skills/event-radar/references/external-llm-prompt.md) y pega el YAML.
-3. Pídele: **"busca eventos"**. Hace el scan, puntúa y entrega el reporte en el formato y el idioma que elegiste.
+After you follow events: reminders (6/3/1 months before; 2 weeks and 1 week only for events you registered for; registration, early-bird and call-for-speakers deadlines), a calendar file or Google Calendar sync, and a monthly "what's coming" digest. After an event: follow-up checklist, ROI (cost per lead/meeting), and scoring suggestions learned from your ratings — proposals you approve, never silent changes.
 
-Tus datos (perfil, base de eventos, reportes) viven en `~/.event-radar/`, no en este repo.
+## Script commands
 
-## Cómo funciona el scoring
-
-Siete criterios de 0 a 10 (alineación, audiencia, ponentes, credibilidad, costo, logística, timing), con pesos según tu objetivo #1. El modelo asigna los sub-puntajes **con evidencia y URL**; el cálculo es determinista en [`event-radar.mjs`](skills/event-radar/scripts/event-radar.mjs). Detalles en [scoring-rubric.md](skills/event-radar/references/scoring-rubric.md).
-
-## Script
-
-Node ≥ 18, sin dependencias:
+Deterministic helper (`skills/event-radar/scripts/event-radar.mjs`) so scoring, dedupe, reminders and exports are reproducible. Claude assigns the sub-scores with evidence; the script does the math.
 
 ```bash
-node skills/event-radar/scripts/event-radar.mjs merge  --events events.json --incoming nuevos.json
-node skills/event-radar/scripts/event-radar.mjs score  --events events.json --goal customers
-node skills/event-radar/scripts/event-radar.mjs longlist --events events.json --lang en
-node skills/event-radar/scripts/event-radar.mjs status --events events.json --ids id1,id2 --set shortlisted
-node skills/event-radar/scripts/event-radar.mjs report --events events.json --lang es --out reporte.md
-node skills/event-radar/scripts/event-radar.mjs dossier --events events.json --id <event-id> --people people.json --out dossier.md
-node skills/event-radar/scripts/event-radar.mjs contacts --people people.json --events events.json --min-priority B --out contactos.csv
-node skills/event-radar/scripts/event-radar.mjs reminders --events events.json --registered-days 14,7 --window-days 60
-node skills/event-radar/scripts/event-radar.mjs ics --events events.json --out recordatorios.ics
-node skills/event-radar/scripts/event-radar.mjs digest --events events.json --window-days 60 --lang en
-node skills/event-radar/scripts/event-radar.mjs crm --events events.json --people people.json --out-dir crm/
-node skills/event-radar/scripts/event-radar.mjs post-event --events events.json --id <event-id> --people people.json --lang en
-node skills/event-radar/scripts/event-radar.mjs outcome --events events.json --id <event-id> --decision attended --rating 4 --leads 3 --cost-actual 800 --currency CAD
-node skills/event-radar/scripts/event-radar.mjs learn --events events.json --goal customers
+S=skills/event-radar/scripts/event-radar.mjs
+node $S merge     --events events.json --incoming new.json [--refresh]
+node $S longlist  --events events.json --lang en
+node $S status    --events events.json --ids id1,id2 --set shortlisted
+node $S score     --events events.json --goal customers
+node $S report    --events events.json --lang en --caps '{"1":150,"2":600}'
+node $S dossier   --events events.json --id <event-id> --people people.json
+node $S contacts  --people people.json --events events.json
+node $S reminders --events events.json --registered-days 14,7 --window-days 60
+node $S ics       --events events.json --out reminders.ics
+node $S digest    --events events.json --window-days 60
+node $S crm       --events events.json --people people.json --out-dir crm/
+node $S outcome   --events events.json --id <event-id> --decision attended --rating 4 --leads 3
+node $S post-event --events events.json --id <event-id> --people people.json
+node $S learn     --events events.json --goal customers
 ```
 
-Hay datos ficticios de prueba en [`examples/`](examples/incoming.example.json).
+Fictional sample data is in [`examples/`](examples/). Details: [events-schema.md](skills/event-radar/references/events-schema.md), [scoring-rubric.md](skills/event-radar/references/scoring-rubric.md), [scan-workflow.md](skills/event-radar/references/scan-workflow.md).
 
-## Estructura
+## Connectors (optional)
 
+Calendar (Google/Outlook), email (Gmail or your own mail MCP), Google Sheets/Drive, Slack, Notion, Monday, HubSpot… The onboarding asks what you use and [connectors.md](skills/event-radar/references/connectors.md) maps each to a fallback (`.ics` file, CSV/Excel, local folder), so nothing depends on them. Anything that sends or creates something outside your machine asks first, except what you authorised during onboarding (for example, emailing the report to yourself).
+
+## Principles
+
+- **Public, not private:** no logged-in scraping; LinkedIn only through public pages that show up in search.
+- **No payments, no registration:** it gives you the link, price and deadline; you do it.
+- **No invention:** anything unverified is marked as such, with source URL and date checked.
+- **Neutral:** no assumed city, industry, language or tools — everything comes from your profile. Results are shown in the language you choose for reports.
+- **Privacy:** people research follows [people-research-rules.md](skills/event-radar/references/people-research-rules.md) (professional public information only, confirmed vs. candidate attendees, deletion on request).
+
+## Development
+
+```bash
+node tests/smoke.mjs
 ```
-.claude-plugin/plugin.json
-skills/event-radar/
-├─ SKILL.md
-├─ references/   cuestionario, prompt externo, conectores, fuentes, rúbrica, esquema, flujo de scan
-├─ templates/    profile.template.yaml
-└─ scripts/      event-radar.mjs
-examples/        datos ficticios
-```
 
-## Principios
+Runs every command against the fictional examples (also in CI on Linux and Windows, Node 18 and 22). See [CHANGELOG.md](CHANGELOG.md).
 
-- **Públicas, no privadas:** nada de scraping de sesiones ni LinkedIn privado.
-- **Sin pagos:** da el enlace y la fecha límite; tú te registras.
-- **Sin invención:** lo no verificado se marca como tal, con fuente y fecha de consulta.
-- **Neutral:** no asume ciudad, industria, idioma ni herramientas; todo sale del perfil.
+## Español
 
-## Licencia
+Plugin de Claude Code que encuentra, puntúa y prepara eventos (incluye webinars y eventos online) para tu negocio. Instálalo con `/plugin marketplace add Erodigitalsolutions/event-radar`, luego `/plugin install event-radar@event-radar` y di **"configura mi Event Radar"**. Las instrucciones internas del skill están en español y el skill conversa en tu idioma; los resultados salen en el idioma que elijas para los reportes. El presupuesto nunca descarta eventos: solo suma o resta un poco al puntaje y se marca como "estiramiento".
+
+## License
 
 MIT

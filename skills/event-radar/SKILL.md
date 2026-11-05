@@ -1,6 +1,6 @@
 ---
 name: event-radar
-description: Descubre, puntúa y prepara eventos (conferencias, ferias, charlas, meetups) alineados con una empresa y le recuerda los deadlines. Úsalo cuando el usuario quiera encontrar eventos relevantes, configurar su perfil de eventos (onboarding), ver el ranking de eventos, preparar un evento (briefing de expositores y asistentes) o configurar recordatorios de eventos. Cubre onboarding, scan, deep-dive, recordatorios, CRM, post-evento y aprendizaje.
+description: Discover, score and prepare for events (conferences, expos, talks, webinars and online events) that match a business, then remind the user of deadlines, keep a simple CRM and learn from feedback. Use when the user wants to find relevant events, set up their event profile (onboarding), see or shortlist events, prepare for an event (exhibitor/attendee briefing), set reminders, or track follow-ups. / Descubre, puntúa y prepara eventos (conferencias, ferias, charlas, webinars) alineados con la empresa, con recordatorios, CRM y aprendizaje.
 ---
 
 # Event Radar
@@ -12,7 +12,7 @@ Agente que encuentra eventos relevantes para la empresa del usuario, los evalúa
 | Fase | Contenido | Estado |
 |---|---|---|
 | 1 | Onboarding, perfil, preferencias de entrega/recordatorios/CRM/conectores | **Construida** |
-| 2 | Scan de eventos por tiers + scoring + reporte | **Construida** |
+| 2 | Scan en 4 fases (lista larga → preselección → valoración → selección final), webinars y online siempre, presupuesto solo como aliciente | **Construida** |
 | 3 | Deep-dive y briefing de expositores/asistentes (fuentes públicas) | **Construida** |
 | 4 | Recordatorios (6/3/1 meses, deadlines), calendario (.ics / Google Calendar), digest y scan programado | **Construida** |
 | 5 | CRM (hoja simple), post-evento, ROI y aprendizaje por feedback | **Construida** |

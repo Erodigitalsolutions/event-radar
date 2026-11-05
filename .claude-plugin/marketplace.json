@@ -1,0 +1,15 @@
+{
+  "name": "event-radar",
+  "owner": { "name": "Ero Digital Solutions", "url": "https://github.com/Erodigitalsolutions" },
+  "metadata": { "description": "Event Radar: event discovery, scoring, briefings, reminders and CRM for Claude Code." },
+  "plugins": [
+    {
+      "name": "event-radar",
+      "source": "./",
+      "description": "Finds, scores and prepares you for events that match your business. Public sources only; never handles payments.",
+      "version": "1.0.0",
+      "category": "productivity",
+      "keywords": ["events", "conferences", "webinars", "networking", "reminders", "crm"]
+    }
+  ]
+}
