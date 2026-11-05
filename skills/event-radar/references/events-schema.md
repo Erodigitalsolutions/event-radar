@@ -73,7 +73,8 @@
 | `contacts --people people.json [--events events.json] [--min-priority A\|B\|C] [--out file.csv]` | CSV de contactos ordenado por prioridad, listo para el CRM. |
 | `reminders --events events.json [--offsets-months 6,3,1] [--registered-days 14,7] [--extra-days N] [--deadline-days 14,3] [--window-days N] [--state f --mark-synced]` | Lista los recordatorios y alertas de deadline de eventos seguidos, sin duplicar los ya sincronizados. |
 | `ics --events events.json --out file.ics` | Calendario importable con eventos seguidos y recordatorios. |
-| `crm --events events.json --people people.json [--existing hoja.csv] [--out-dir d]` | Genera pestañas `Events` y `Contacts` (CSV + `crm-sheet.json`). Con `--existing` conserva lo que el usuario editó en la hoja. |
+| `export --events events.json [--people f] [--existing hoja.csv] --out-dir d [--lang] [--caps JSON]` | Paquete de entrega completo: `event-radar.xlsx` (Events, Prices, Timeline, Scores, Contacts), CSV y `crm-sheet.json`, `report.md/csv`, `reminders.ics`, `digest.md`. |
+| `crm --events events.json [--people f] [--existing hoja.csv] [--out-dir d]` | Solo las pestañas de la hoja (+ xlsx). Con `--existing` conserva lo que el usuario editó en `Contacts`. |
 | `outcome --events events.json --id <id> --decision attended|skipped [--rating --leads --meetings --opportunities --cost-actual --currency --would-return --reason --notes]` | Registra el resultado del usuario y pasa el evento a `attended`/`skipped`. |
 | `post-event --events events.json --id <id> [--people f] [--lang] [--out f]` | Checklist post-evento y contactos a seguir con fecha límite por prioridad. |
 | `learn --events events.json [--goal g] [--min-events 3] [--out f]` | ROI, series que gustaron, razones de descarte y pesos sugeridos (solo propuesta). |

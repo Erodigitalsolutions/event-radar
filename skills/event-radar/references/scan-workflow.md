@@ -27,7 +27,7 @@ Fase 4  Selección final  el usuario elige a quién seguir          → watching
    node scripts/event-radar.mjs merge --events <data>/events.json --incoming incoming.json
    node scripts/event-radar.mjs longlist --events <data>/events.json --lang <reports.language> --out <data>/reports/<YYYY-MM-DD>-longlist.md
    ```
-6. Muestra la lista larga agrupada (Online / Tier 1 / 2 / 3 / 4) con su encaje. Cuenta cuántos hay y qué fuentes fallaron.
+6. Ejecuta la entrega (`delivery-and-sync.md`) para que la hoja ya contenga la lista larga. Muestra la lista larga agrupada (Online / Tier 1 / 2 / 3 / 4) con su encaje. Cuenta cuántos hay y qué fuentes fallaron.
 
 ## Fase 2 — Preselección (el usuario)
 
@@ -50,7 +50,7 @@ Lo que no mencione queda en `new`, no se pierde. Si pide más como los elegidos,
    ```
    (`--caps` sale de `budget.per_event_max_by_tier`; solo añade la nota "por encima del tope".)
 4. Revisa los `watching`/`deep-dive`/`attending`: re-verifica fecha, precio y deadlines y avisa los cambios (`changed_fields` del merge).
-5. Entrega en el formato de `reports.deliverable` (`email` corto + Excel: `report --format csv` → .xlsx). El correo automático a su propia dirección sigue las reglas de `reminders-and-automation.md`.
+5. **Entrega (obligatoria):** sigue `delivery-and-sync.md`: `export` (reporte, Excel con Events/Prices/Timeline/Scores, `.ics`, digest), actualizar o crear la hoja de Google, y enviar el correo corto con adjuntos según `automation`. Dile al usuario qué se creó y dónde.
 
 ## Fase 4 — Selección final y análisis a fondo
 
@@ -58,7 +58,7 @@ Pregunta cuáles quiere seguir (`watching`) y cuáles analizar a fondo (`deep-di
 ```
 node scripts/event-radar.mjs status --events <data>/events.json --ids ... --set watching|deep-dive
 ```
-Para `deep-dive` sigue `deep-dive-workflow.md`. Aquí el presupuesto tampoco limita: si es caro, dilo y deja la decisión al usuario. Los recordatorios (Fase 4 del plugin) se crean para los seguidos.
+Al registrar la decisión ejecuta la **entrega** (`delivery-and-sync.md`): hoja actualizada y recordatorios/deadlines creados en el calendario para los eventos seguidos. Para `deep-dive` sigue `deep-dive-workflow.md`. Aquí el presupuesto tampoco limita: si es caro, dilo y deja la decisión al usuario. Los recordatorios (Fase 4 del plugin) se crean para los seguidos.
 
 ## Reglas
 

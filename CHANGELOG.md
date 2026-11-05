@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.0
+- Automatic delivery at the end of each phase: new `export` command builds an Excel workbook (Events, Prices, Timeline, Scores, Contacts) plus CSV/JSON, report, `.ics` and digest, with a dependency-free xlsx writer.
+- Delivery guide: create or update the Google Sheet (preserving user edits), sync calendar reminders and deadlines, email the report to yourself — driven by new `automation` settings asked once in onboarding (block 11).
+
 ## 1.0.0
 First public release.
 - Onboarding questionnaire (incl. a prompt you can paste into another LLM), saved as a profile in `~/.event-radar/`.

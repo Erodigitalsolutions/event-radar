@@ -50,12 +50,16 @@ Lee `references/onboarding-questionnaire.md` y síguelo. Puntos clave:
 
 ## Flujo: Scan en 4 fases
 
-Cuando el usuario pida buscar eventos, y el onboarding esté completo, sigue `references/scan-workflow.md`: (1) lista larga con TODO lo que pueda encajar, incluidos webinars y eventos online siempre; (2) el usuario preselecciona; (3) búsqueda profunda y valoración de los preseleccionados; (4) el usuario elige a quién seguir y empieza el análisis a fondo. **El presupuesto nunca descarta eventos**, solo es un aliciente y una nota. Comandos nuevos: `longlist`, `status`. Archivos de apoyo:
+Cuando el usuario pida buscar eventos, y el onboarding esté completo, sigue `references/scan-workflow.md`: (1) lista larga con TODO lo que pueda encajar, incluidos webinars y eventos online siempre; (2) el usuario preselecciona; (3) búsqueda profunda y valoración de los preseleccionados; (4) el usuario elige a quién seguir y empieza el análisis a fondo. **El presupuesto nunca descarta eventos**, solo es un aliciente y una nota. Comandos nuevos: `longlist`, `status`, `export`. Archivos de apoyo:
 
 - `references/sources.md`: dónde buscar, consultas, verificación y límites.
 - `references/scoring-rubric.md`: criterios, pesos y penalizaciones. **Tú asignas sub-puntajes con evidencia; el cálculo lo hace el script.**
 - `references/events-schema.md`: formato de `events.json`.
 - `scripts/event-radar.mjs`: `merge`, `longlist`, `status`, `score` y `report` (Node ≥ 18, sin dependencias). Ejecútalo con la ruta absoluta del skill.
+
+## Entrega automática
+
+Al cerrar la Fase 1, 3 y 4 (y en cualquier scan programado) ejecuta `references/delivery-and-sync.md`: `export` genera reporte, Excel (pestañas Events, Prices, Timeline, Scores, Contacts), `.ics` y digest; luego actualiza o crea la hoja de Google, crea los recordatorios en el calendario y envía el correo al propio usuario, según `automation` del perfil. Lo no autorizado se pregunta una vez; sin conector, queda en archivos. Siempre di qué se creó y dónde.
 
 ## Flujo: Deep-dive y briefing
 

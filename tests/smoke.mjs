@@ -75,6 +75,15 @@ ok("crm preserves the user's sheet edits", () => {
   run("crm", "--events", ev, "--people", people, "--existing", edited, "--out-dir", d2);
   assert.match(fs.readFileSync(path.join(d2, "crm-contacts.csv"), "utf8"), /contacted,2026-11-01,2027-03-20,send deck,"Met, said ""call me"""/);
 });
+ok("export builds the delivery package (xlsx with 5 tabs, report, ics, digest)", () => {
+  const d = path.join(tmp, "pkg");
+  run("export", "--events", ev, "--people", people, "--out-dir", d, "--lang", "en", ...TODAY);
+  for (const f of ["event-radar.xlsx", "report.md", "report.csv", "reminders.ics", "digest.md", "crm-sheet.json", "crm-prices.csv", "crm-timeline.csv"]) assert.ok(fs.existsSync(path.join(d, f)), f);
+  const x = fs.readFileSync(path.join(d, "event-radar.xlsx"));
+  assert.equal(x.slice(0, 2).toString(), "PK");
+  const wb = JSON.parse(fs.readFileSync(path.join(d, "crm-sheet.json"), "utf8"));
+  assert.deepEqual(Object.keys(wb.tabs), ["Events", "Prices", "Timeline", "Scores", "Contacts"]);
+});
 ok("outcome + post-event + learn", () => {
   const id = byName("Example Retail Expo").id;
   const o = JSON.parse(run("outcome", "--events", ev, "--id", id, "--decision", "attended", "--rating", 5, "--leads", 4, "--cost-actual", 800, "--currency", "CAD", "--today", "2027-03-13"));

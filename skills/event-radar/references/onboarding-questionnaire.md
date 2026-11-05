@@ -70,6 +70,13 @@ Reglas de conducción:
 36. ¿Qué usas para calendario, correo, chat y organización (Slack, Teams, Notion, Monday, Asana, ClickUp, Airtable…)?
 37. Para cada una que mencione, consulta `connectors.md`, revisa si el conector está disponible en la sesión y propón qué podría hacer ahí. No instales ni autorices nada sin que lo pida: si falta autorización, dile que la haga él mismo desde `/mcp`.
 
+## Bloque 11 · Entrega automática (autorizaciones)
+38. Al cerrar cada fase, ¿quieres que yo haga la entrega completa sin preguntarte cada vez? Pregunta cada una por separado y guarda la respuesta en `automation`:
+    - **Hoja de cálculo**: crear (y mantener al día) una hoja con todos los eventos, precios, timeline y puntajes → `automation.sheet: create | update_only | off`.
+    - **Calendario**: crear los recordatorios y deadlines de los eventos que sigas → `automation.calendar: on | off`.
+    - **Correo**: enviarte el reporte corto con adjuntos a tu propia dirección → `automation.email: self_only | ask | off`.
+    Explica qué se crea y dónde; nada sale a terceros. Detalle en `delivery-and-sync.md`.
+
 ## Cierre
 - Muestra el perfil resumido (empresa, objetivos, geografía, presupuesto, cadencia, idioma, entregables, recordatorios, CRM, integraciones).
 - Lista **pendientes** (campos `null`).

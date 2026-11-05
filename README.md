@@ -35,6 +35,10 @@ Your data (profile, event database, reports, dossiers) lives in `~/.event-radar/
 
 After you follow events: reminders (6/3/1 months before; 2 weeks and 1 week only for events you registered for; registration, early-bird and call-for-speakers deadlines), a calendar file or Google Calendar sync, and a monthly "what's coming" digest. After an event: follow-up checklist, ROI (cost per lead/meeting), and scoring suggestions learned from your ratings — proposals you approve, never silent changes.
 
+## Delivery (automatic)
+
+At the end of each phase the plugin delivers everything, using what you authorised during onboarding: an Excel workbook (**Events**, **Prices** with deadlines, **Timeline**, **Scores**, **Contacts**), a Google Sheet kept up to date (created in your Drive the first time, your edits to Contacts preserved), calendar reminders and deadline alerts for the events you follow, and a short email with attachments to yourself. Without connectors it leaves the files in a folder and tells you how to import them. See [delivery-and-sync.md](skills/event-radar/references/delivery-and-sync.md).
+
 ## Script commands
 
 Deterministic helper (`skills/event-radar/scripts/event-radar.mjs`) so scoring, dedupe, reminders and exports are reproducible. Claude assigns the sub-scores with evidence; the script does the math.
@@ -51,6 +55,7 @@ node $S contacts  --people people.json --events events.json
 node $S reminders --events events.json --registered-days 14,7 --window-days 60
 node $S ics       --events events.json --out reminders.ics
 node $S digest    --events events.json --window-days 60
+node $S export    --events events.json --people people.json --out-dir out/   # xlsx + csv + report + ics + digest
 node $S crm       --events events.json --people people.json --out-dir crm/
 node $S outcome   --events events.json --id <event-id> --decision attended --rating 4 --leads 3
 node $S post-event --events events.json --id <event-id> --people people.json

@@ -95,6 +95,11 @@ reminders:
   digest_frequency: null      # weekly | biweekly | monthly | none
   quiet_hours: null
 
+automation:                    # autorizaciones de entrega (ver references/delivery-and-sync.md); null = preguntar una vez
+  sheet: null                 # create | update_only | off
+  calendar: null              # on | off
+  email: null                 # self_only | ask | off
+
 crm:
   mode: null                  # existing | create | none
   existing_tool: null         # hubspot | salesforce | notion | airtable | sheets | otro

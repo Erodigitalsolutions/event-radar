@@ -1,6 +1,6 @@
 {
   "name": "event-radar",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Finds, scores and prepares you for events (conferences, expos, webinars) that match your business. Onboarding, 4-phase scan, deep dives, reminders, CRM and post-event learning. Public sources only; never handles payments.",
   "author": { "name": "Ero Digital Solutions", "url": "https://github.com/Erodigitalsolutions" },
   "homepage": "https://github.com/Erodigitalsolutions/event-radar",

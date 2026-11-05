@@ -1,5 +1,7 @@
 # Recordatorios y automatización (Fase 4)
 
+> La entrega completa (hoja, calendario, correo) se ejecuta sola al cerrar cada fase: ver `delivery-and-sync.md`. Este archivo detalla los recordatorios y el scan programado.
+
 Todo sale de `profile.yaml` (`reminders`, `scan`, `reports`) y del `status` de cada evento. Nada se envía a terceros: solo al propio usuario.
 
 ## Qué recordatorios se generan

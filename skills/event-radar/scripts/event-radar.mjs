@@ -492,9 +492,9 @@ const contactKey = (p) => `${p.event_id || ""}|${norm(p.name)}`;
 const FOLLOWUP_DAYS = { A: 2, B: 5, C: 10 };
 
 function cmdCrm(a) {
-  if (!a.events || !a.people) die("uso: crm --events <events.json> --people <people.json> [--existing contacts-from-sheet.csv] [--out-dir dir]");
+  if (!a.events) die("uso: crm --events <events.json> [--people <people.json>] [--existing contacts-from-sheet.csv] [--out-dir dir] [--today ...]");
   const events = eventsOf(readJson(a.events));
-  const people = readJson(a.people);
+  const people = a.people && a.people !== true ? readJson(a.people) : [];
   const dir = a["out-dir"] && a["out-dir"] !== true ? a["out-dir"] : ".";
   fs.mkdirSync(dir, { recursive: true });
   // Estado que el usuario edita en la hoja: se conserva por clave.
@@ -518,15 +518,117 @@ function cmdCrm(a) {
   }
   let kept = 0;
   for (const o of prevRows) if (!seen.has(o.key)) { crows.push(CONTACT_HEAD.map((k) => o[k] ?? "")); kept++; }
-  const erows = events.filter((e) => e.status && e.status !== "new").map((e) => {
-    const o = e.outcome || {};
-    return [e.id, e.name, e.start_date, e.end_date, e.city, e.country, e.tier, e.score, e.label, e.status, e.url, e.registration_deadline, o.reason, o.rating, o.leads, o.meetings, o.opportunities, o.cost_actual, o.currency, o.would_return, o.notes];
-  });
-  const tabs = { Events: [EVENT_HEAD, ...erows], Contacts: [CONTACT_HEAD, ...crows] };
-  fs.writeFileSync(`${dir}/crm-events.csv`, toCsv(tabs.Events), "utf8");
-  fs.writeFileSync(`${dir}/crm-contacts.csv`, toCsv(tabs.Contacts), "utf8");
+  const sheet = buildSheetTabs(events, today(a), a);
+  const tabs = { ...sheet, Contacts: [CONTACT_HEAD, ...crows] };
+  for (const [name, rows] of Object.entries(tabs)) fs.writeFileSync(`${dir}/crm-${name.toLowerCase()}.csv`, toCsv(rows), "utf8");
   writeJson(`${dir}/crm-sheet.json`, { tabs, statuses: CONTACT_STATUSES });
-  console.log(JSON.stringify({ events: erows.length, contacts: crows.length, preserved_from_sheet: prev.size, kept_only_in_sheet: kept, out_dir: dir }, null, 2));
+  writeXlsx(`${dir}/event-radar.xlsx`, tabs);
+  const erows = tabs.Events.slice(1);
+  console.log(JSON.stringify({ events: erows.length, prices: tabs.Prices.length - 1, timeline: tabs.Timeline.length - 1, scores: tabs.Scores.length - 1, contacts: crows.length, preserved_from_sheet: prev.size, kept_only_in_sheet: kept, out_dir: dir, workbook: `${dir}/event-radar.xlsx` }, null, 2));
+}
+
+
+// ---------- hoja de calculo: pestañas, xlsx sin dependencias, export ----------
+const PRICE_TXT = (e) => e.price_text || money(e.cost_estimate) || "";
+function nextPriceDeadline(e, t) {
+  const ds = [...(e.prices || []).map((p) => p.until), e.registration_deadline].filter((d) => isDate(d) && d >= t).sort();
+  return ds[0] || "";
+}
+function daysBetween(a, b) { return Math.round((Date.parse(b) - Date.parse(a)) / 86400000); }
+
+function buildSheetTabs(events, t, a) {
+  const NOT_TIMELINE = ["new", "filtered", "skipped", "cancelled", "attended"];
+  const sorted = [...events].sort((x, y) => (y.score ?? -1) - (x.score ?? -1) || String(x.start_date || "9999").localeCompare(String(y.start_date || "9999")));
+  const Events = [["id", "name", "status", "score", "label", "start_date", "end_date", "days_to_start", "city", "country", "venue", "tier", "format", "online", "organizer", "price_summary", "cost_est_min", "cost_est_max", "cost_currency", "price_known", "registration_deadline", "next_deadline", "url", "match", "why", "unverified", "last_checked", "decision_reason", "rating", "leads", "meetings", "opportunities", "cost_actual", "currency", "would_return", "outcome_notes"]];
+  for (const e of sorted) {
+    const o = e.outcome || {};
+    const why = Object.values(e.evidence || {}).map((v) => v.note).filter(Boolean).join("; ") || e.match_reason || e.description || "";
+    Events.push([e.id, e.name, e.status, e.score, e.label, e.start_date, e.end_date, isDate(e.start_date) ? daysBetween(t, e.start_date) : "", e.city, e.country, e.venue, e.tier, e.format, isOnline(e) ? "yes" : "no", e.organizer, PRICE_TXT(e),
+      e.cost_estimate?.min, e.cost_estimate?.max, e.cost_estimate?.currency, e.cost_estimate ? (e.cost_estimate.price_known ? "yes" : "no") : "", e.registration_deadline, nextPriceDeadline(e, t), e.url, e.match, why, (e.unverified || []).join(", "), e.last_checked,
+      e.filtered_reason || o.reason, o.rating, o.leads, o.meetings, o.opportunities, o.cost_actual, o.currency, o.would_return, o.notes]);
+  }
+  const Prices = [["event", "status", "label", "amount", "currency", "valid_until", "days_left", "note"]];
+  for (const e of sorted) {
+    for (const p of e.prices || []) Prices.push([e.name, e.status, p.label, p.amount, p.currency, p.until, isDate(p.until) ? daysBetween(t, p.until) : "", ""]);
+    const c = e.cost_estimate;
+    if (c && (c.min != null || c.max != null)) Prices.push([e.name, e.status, "Estimated total incl. travel (estimate)", c.min === c.max ? c.min : `${c.min}-${c.max}`, c.currency, "", "", c.price_known ? "ticket price published" : "ticket price NOT confirmed"]);
+    else if (!(e.prices || []).length) Prices.push([e.name, e.status, "Price", "", "", "", "", e.price_text || "not published"]);
+  }
+  const Timeline = [["date", "days_from_today", "event", "status", "type", "description", "url"]];
+  const tl = [];
+  const add = (e, date, type, desc) => { if (isDate(date) && date >= t) tl.push([date, daysBetween(t, date), e.name, e.status, type, desc, e.url || ""]); };
+  for (const e of events) {
+    if (NOT_TIMELINE.includes(e.status)) continue;
+    const place = isOnline(e) ? "Online" : [e.city, e.country].filter(Boolean).join(", ");
+    add(e, e.start_date, "event", `${e.name}${e.end_date && e.end_date !== e.start_date ? " (until " + e.end_date + ")" : ""}${place ? " · " + place : ""}`);
+    for (const p of e.prices || []) add(e, p.until, "price-deadline", `${p.label || "Price"} ends (${p.currency || ""} ${p.amount})`);
+    add(e, e.registration_deadline, "registration-deadline", "Registration closes");
+    add(e, e.call_for_speakers_deadline, "cfs-deadline", "Call for speakers closes");
+  }
+  for (const r of buildReminders(a, events, t)) if (!r.missed) tl.push([r.date, daysBetween(t, r.date), r.event, events.find((e) => e.id === r.event_id)?.status, "reminder", r.title, r.url]);
+  tl.sort((x, y) => x[0].localeCompare(y[0]) || String(x[2]).localeCompare(String(y[2])));
+  Timeline.push(...tl);
+  const Scores = [["event", "status", "score", "label", ...KEYS, "evidence", "score_notes"]];
+  for (const e of sorted) if (e.scores) Scores.push([e.name, e.status, e.score, e.label, ...KEYS.map((k) => e.scores[k]), Object.entries(e.evidence || {}).map(([k, v]) => `${k}: ${v.note}${v.url ? " (" + v.url + ")" : ""}`).join(" | "), (e.score_notes || []).join("; ")]);
+  return { Events, Prices, Timeline, Scores };
+}
+
+// xlsx minimo (zip sin compresion, cadenas inline). Sin dependencias.
+const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+const crc32 = (buf) => { let c = 0xffffffff; for (let i = 0; i < buf.length; i++) c = CRC[(c ^ buf[i]) & 0xff] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; };
+function zipStore(files) {
+  const chunks = [], central = []; let offset = 0;
+  for (const [name, content] of files) {
+    const nb = Buffer.from(name, "utf8"), data = Buffer.from(content, "utf8"), crc = crc32(data);
+    const lh = Buffer.alloc(30); lh.writeUInt32LE(0x04034b50, 0); lh.writeUInt16LE(20, 4); lh.writeUInt16LE(0x0800, 6); lh.writeUInt16LE(0, 8); lh.writeUInt16LE(0, 10); lh.writeUInt16LE(0x21, 12);
+    lh.writeUInt32LE(crc, 14); lh.writeUInt32LE(data.length, 18); lh.writeUInt32LE(data.length, 22); lh.writeUInt16LE(nb.length, 26); lh.writeUInt16LE(0, 28);
+    chunks.push(lh, nb, data);
+    const ch = Buffer.alloc(46); ch.writeUInt32LE(0x02014b50, 0); ch.writeUInt16LE(20, 4); ch.writeUInt16LE(20, 6); ch.writeUInt16LE(0x0800, 8); ch.writeUInt16LE(0, 10); ch.writeUInt16LE(0, 12); ch.writeUInt16LE(0x21, 14);
+    ch.writeUInt32LE(crc, 16); ch.writeUInt32LE(data.length, 20); ch.writeUInt32LE(data.length, 24); ch.writeUInt16LE(nb.length, 28); ch.writeUInt32LE(offset, 42);
+    central.push(ch, nb);
+    offset += 30 + nb.length + data.length;
+  }
+  const cd = Buffer.concat(central);
+  const end = Buffer.alloc(22); end.writeUInt32LE(0x06054b50, 0); end.writeUInt16LE(files.length, 8); end.writeUInt16LE(files.length, 10); end.writeUInt32LE(cd.length, 12); end.writeUInt32LE(offset, 16);
+  return Buffer.concat([...chunks, cd, end]);
+}
+const xmlEsc = (s) => String(s).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+const colName = (i) => { let s = ""; for (let n = i + 1; n > 0; n = Math.floor((n - 1) / 26)) s = String.fromCharCode(65 + ((n - 1) % 26)) + s; return s; };
+function sheetXml(rows) {
+  const widths = rows[0].map((_, c) => Math.min(60, Math.max(10, ...rows.slice(0, 60).map((r) => String(r[c] ?? "").length + 2))));
+  const cols = "<cols>" + widths.map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join("") + "</cols>";
+  const body = rows.map((r, ri) => `<row r="${ri + 1}">` + r.map((v, ci) => {
+    if (v == null || v === "") return "";
+    const ref = colName(ci) + (ri + 1), s = ri === 0 ? ' s="1"' : "";
+    return typeof v === "number" && Number.isFinite(v) ? `<c r="${ref}"${s}><v>${v}</v></c>` : `<c r="${ref}"${s} t="inlineStr"><is><t xml:space="preserve">${xmlEsc(v)}</t></is></c>`;
+  }).join("") + "</row>").join("");
+  const ref = `A1:${colName(rows[0].length - 1)}${rows.length}`;
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>${cols}<sheetData>${body}</sheetData><autoFilter ref="${ref}"/></worksheet>`;
+}
+function writeXlsx(file, tabs) {
+  const names = Object.keys(tabs);
+  const files = [
+    ["[Content_Types].xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>${names.map((_, i) => `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join("")}</Types>`],
+    ["_rels/.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`],
+    ["xl/workbook.xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${names.map((n, i) => `<sheet name="${xmlEsc(n.slice(0, 31))}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join("")}</sheets></workbook>`],
+    ["xl/_rels/workbook.xml.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${names.map((_, i) => `<Relationship Id="rId${i + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`).join("")}<Relationship Id="rId${names.length + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`],
+    ["xl/styles.xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs></styleSheet>`],
+    ...names.map((n, i) => [`xl/worksheets/sheet${i + 1}.xml`, sheetXml(tabs[n])]),
+  ];
+  fs.writeFileSync(file, zipStore(files));
+}
+
+// export: todo el paquete de entrega en una sola orden
+function cmdExport(a) {
+  if (!a.events) die("uso: export --events <events.json> [--people people.json] [--existing contacts.csv] [--out-dir dir] [--lang en|es] [--caps JSON] [--registered-days 14,7] [--today ...]");
+  const dir = a["out-dir"] && a["out-dir"] !== true ? a["out-dir"] : ".";
+  fs.mkdirSync(dir, { recursive: true });
+  const b = { ...a, "out-dir": dir, lang: a.lang === "es" ? "es" : "en" };
+  cmdCrm(b);
+  cmdReport({ ...b, format: "md", out: `${dir}/report.md` });
+  cmdReport({ ...b, format: "csv", out: `${dir}/report.csv` });
+  cmdIcs({ ...b, out: `${dir}/reminders.ics` });
+  cmdDigest({ ...b, out: `${dir}/digest.md` });
 }
 
 function findEvent(db, id) {
@@ -648,7 +750,8 @@ else if (cmd === "digest") cmdDigest(args);
 else if (cmd === "longlist") cmdLonglist(args);
 else if (cmd === "status") cmdStatus(args);
 else if (cmd === "crm") cmdCrm(args);
+else if (cmd === "export") cmdExport(args);
 else if (cmd === "outcome") cmdOutcome(args);
 else if (cmd === "post-event") cmdPostEvent(args);
 else if (cmd === "learn") cmdLearn(args);
-else die("comandos: merge | score | report | dossier | contacts | reminders | ics | digest | longlist | status | crm | outcome | post-event | learn");
+else die("comandos: merge | score | report | dossier | contacts | reminders | ics | digest | longlist | status | crm | export | outcome | post-event | learn");
