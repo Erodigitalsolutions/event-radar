@@ -7,7 +7,7 @@
       "name": "event-radar",
       "source": "./",
       "description": "Finds, scores and prepares you for events that match your business. Public sources only; never handles payments.",
-      "version": "1.2.0",
+      "version": "1.3.0",
       "category": "productivity",
       "keywords": ["events", "conferences", "webinars", "networking", "reminders", "crm"]
     }

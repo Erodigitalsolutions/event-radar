@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.3.0
+- Install without git, terminal or admin rights: ready-made `dist/event-radar-skill.zip` and a one-message install prompt in README and GETTING-STARTED; a smoke test keeps the zip in sync with the skill.
+
 ## 1.2.0
 - Non-technical onboarding: environment check that installs Node with the user's permission or falls back to a manual mode with the same flow; plain-language GETTING-STARTED guide in English and Spanish.
 

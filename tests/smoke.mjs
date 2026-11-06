@@ -84,6 +84,11 @@ ok("export builds the delivery package (xlsx with 5 tabs, report, ics, digest)",
   const wb = JSON.parse(fs.readFileSync(path.join(d, "crm-sheet.json"), "utf8"));
   assert.deepEqual(Object.keys(wb.tabs), ["Events", "Prices", "Timeline", "Scores", "Contacts"]);
 });
+ok("dist/event-radar-skill.zip is up to date (run tools/build-skill-zip.mjs if this fails)", () => {
+  const out = path.join(tmp, "skill.zip");
+  execFileSync(process.execPath, [path.join(root, "tools/build-skill-zip.mjs"), "--out", out]);
+  assert.ok(fs.readFileSync(out).equals(fs.readFileSync(path.join(root, "dist/event-radar-skill.zip"))), "dist zip is stale");
+});
 ok("outcome + post-event + learn", () => {
   const id = byName("Example Retail Expo").id;
   const o = JSON.parse(run("outcome", "--events", ev, "--id", id, "--decision", "attended", "--rating", 5, "--leads", 4, "--cost-actual", 800, "--currency", "CAD", "--today", "2027-03-13"));

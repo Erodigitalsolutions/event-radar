@@ -8,14 +8,22 @@ A [Claude Code](https://claude.com/claude-code) plugin (it ships one skill) that
 
 ## Install
 
-In Claude Code:
+**Easiest — no git, no terminal, no admin rights, nothing to install.** Paste this message into Claude (Code tab) and press Enter:
+
+```
+Please install the Event Radar skill for me. Download https://github.com/Erodigitalsolutions/event-radar/raw/main/dist/event-radar-skill.zip and unzip it into my Claude skills folder (.claude/skills in my user folder) so that .claude/skills/event-radar/SKILL.md exists. Do not install anything else. Tell me when it is done.
+```
+
+Then close and reopen Claude. If your company blocks the download from Claude, click the link above in your browser, then tell Claude: "install the Event Radar zip from my Downloads folder the same way". Updating works the same way: repeat the message.
+
+**With git (optional, for people who already have it):**
 
 ```
 /plugin marketplace add Erodigitalsolutions/event-radar
 /plugin install event-radar@event-radar
 ```
 
-Or copy `skills/event-radar` into your own skills folder. Requirements: Claude Code. Node.js ≥ 18 runs the helper script; if it's missing, Claude offers to install it or continues in manual mode ([setup-check.md](skills/event-radar/references/setup-check.md)).
+Or copy `skills/event-radar` into your own skills folder. Requirements: Claude Code. Node.js ≥ 18 runs the helper script; if it's missing (or your computer won't let you install it), Claude offers to install it or continues in manual mode ([setup-check.md](skills/event-radar/references/setup-check.md)).
 
 ## First run
 
@@ -81,7 +89,8 @@ Calendar (Google/Outlook), email (Gmail or your own mail MCP), Google Sheets/Dri
 ## Development
 
 ```bash
-node tests/smoke.mjs
+node tests/smoke.mjs                 # all commands + checks that dist/ is up to date
+node tools/build-skill-zip.mjs       # rebuild dist/event-radar-skill.zip after changing the skill
 ```
 
 Runs every command against the fictional examples (also in CI on Linux and Windows, Node 18 and 22). See [CHANGELOG.md](CHANGELOG.md).
