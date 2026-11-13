@@ -739,7 +739,7 @@ function cmdLearn(a) {
 
 // ---------- relay: correo del reporte al propio usuario via el servicio de Event Radar ----------
 // El servidor guarda la clave de Resend; aqui solo viaja el correo del usuario y su clave personal.
-const DEFAULT_RELAY = "";
+const DEFAULT_RELAY = "https://radar.erodigitalsolutions.com";
 function relayUrl(a) {
   const u = String(a["relay-url"] && a["relay-url"] !== true ? a["relay-url"] : process.env.EVENT_RADAR_RELAY || DEFAULT_RELAY).replace(/\/$/, "");
   if (!u) die("falta --relay-url (reports.relay_url del perfil)");

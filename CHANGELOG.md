@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.4.0
+- Report email service live (`relay/`): people with no email connector can have their reports emailed to themselves. Confirmation link, personal key, one-click unsubscribe; subscribers stored on Neon, sending-only Resend key.
+- New commands `relay-register` and `relay-send`; the service address is built in.
+
 ## 1.3.0
 - Install without git, terminal or admin rights: ready-made `dist/event-radar-skill.zip` and a one-message install prompt in README and GETTING-STARTED; a smoke test keeps the zip in sync with the skill.
 

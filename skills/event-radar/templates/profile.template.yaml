@@ -82,7 +82,7 @@ reports:
   detail_level: null          # corto | medio | profundo
   delivery_folder: null
   email_via: null             # own_connector | relay | none (relay = servicio de correo de Event Radar, ver delivery-and-sync.md)
-  relay_url: null             # URL del servicio (la da el autor del plugin)
+  relay_url: null             # opcional; por defecto https://radar.erodigitalsolutions.com
   relay_key: null             # clave personal que recibe el usuario al confirmar su correo; es un secreto, no la compartas
   email_to: null
   email_style: null           # short | full

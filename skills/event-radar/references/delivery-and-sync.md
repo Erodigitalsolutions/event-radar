@@ -43,7 +43,7 @@ Solo para eventos seguidos (`watching`, `deep-dive`, `attending`), según `remin
 
 ## Paso D · Correo — `automation.email`
 
-**Orden de preferencia para enviar:** (1) el conector de correo del propio usuario (Gmail, Outlook, su MCP de correo); (2) si no tiene ninguno, el **servicio de correo de Event Radar** (`reports.email_via: relay`), descrito abajo; (3) archivos en `delivery_folder`.
+**Orden de preferencia para enviar:** (1) el conector de correo del propio usuario (Gmail, Outlook, su MCP de correo); (2) si no tiene ninguno, el **servicio de correo de Event Radar** (`reports.email_via: relay`; la dirección del servicio ya viene incluida, no hace falta `--relay-url`), descrito abajo; (3) archivos en `delivery_folder`.
 
 ### Servicio de correo de Event Radar (sin conector de correo)
 Usuarios sin conector reciben su reporte en su correo mediante un servicio pequeño del autor del plugin (`relay/`). Antes de usarlo, **explícale en palabras simples y pide su OK**: "Para enviarte el reporte por correo sin que conectes nada, el correo pasa por un servidor del autor de Event Radar y sale con su cuenta de Resend. Solo se envía a tu propia dirección, no se guarda el contenido en ese servidor (el proveedor de correo conserva un registro del envío) y puedes darte de baja cuando quieras."
