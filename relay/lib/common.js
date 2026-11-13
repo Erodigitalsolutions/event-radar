@@ -3,7 +3,7 @@ import crypto from "node:crypto";
 
 export const env = (k) => process.env[k] || "";
 export const baseUrl = () => env("PUBLIC_BASE_URL").replace(/\/$/, "");
-export const fromAddress = () => env("FROM_ADDRESS") || "Event Radar <radar@radar.erodigitalsolutions.com>";
+export const fromAddress = () => env("FROM_ADDRESS") || "Event Radar <radar@erodigitalsolutions.com>";
 
 // Signed tokens: nothing is stored on the server to verify an address or a user key.
 export const mac = (parts) => crypto.createHmac("sha256", env("RELAY_SECRET")).update(parts.join("|")).digest("base64url");

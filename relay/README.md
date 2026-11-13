@@ -15,7 +15,7 @@ Guard rails: the recipient is always the verified address (no open relay); attac
 
 ## Setup (once, by the plugin's author)
 
-1. Resend: verify a **sending subdomain** (e.g. `radar.example.com`) with the DNS records Resend shows (DKIM TXT, SPF MX/TXT, return-path CNAME). A subdomain keeps your main domain's email reputation separate.
+1. Resend: verify your sending domain (or a subdomain such as `radar.example.com` if you want to keep your main domain's email reputation separate) with the DNS records Resend shows (DKIM TXT, SPF MX/TXT, return-path CNAME).
 2. Resend: create an API key with **sending access restricted to that domain** and a contacts-capable key if your plan separates them (the relay uses `/emails` and `/contacts`).
 3. Deploy this folder as a Vercel project (root directory `relay`) with these environment variables:
 
