@@ -8,17 +8,21 @@ process.env.RELAY_SECRET = "test-secret-" + "x".repeat(32);
 process.env.RESEND_API_KEY = "re_test";
 process.env.PUBLIC_BASE_URL = "https://relay.example";
 process.env.FROM_ADDRESS = "Event Radar <radar@radar.example>";
+process.env.DATABASE_URL = "postgresql://u:p@db.test/relay";
 
 const calls = [];
-const contacts = new Map();
+const subs = new Map(); // fake Neon: email -> unsubscribed
 globalThis.fetch = async (url, init = {}) => {
   const u = new URL(url), method = init.method || "GET", data = init.body ? JSON.parse(init.body) : null;
-  calls.push({ path: u.pathname, method, data, auth: init.headers?.Authorization });
+  calls.push({ host: u.host, path: u.pathname, method, data, auth: init.headers?.Authorization });
   const reply = (status, json) => ({ ok: status < 300, status, json: async () => json });
-  if (u.pathname === "/emails") return reply(200, { id: "em_1" });
-  if (u.pathname === "/contacts" && method === "POST") { if (contacts.has(data.email)) return reply(409, {}); contacts.set(data.email, { unsubscribed: !!data.unsubscribed }); return reply(200, { id: "c_1" }); }
-  const m = u.pathname.match(/^\/contacts\/(.+)$/);
-  if (m) { const e = decodeURIComponent(m[1]); if (!contacts.has(e)) return reply(404, {}); if (method === "PATCH") Object.assign(contacts.get(e), { unsubscribed: data.unsubscribed }); return reply(200, { email: e, ...contacts.get(e) }); }
+  if (u.host === "api.resend.com" && u.pathname === "/emails") return reply(200, { id: "em_1" });
+  if (u.host === "db.test" && u.pathname === "/sql") {
+    const q = data.query, email = data.params[0];
+    if (q.startsWith("insert into subscribers")) { subs.set(email, false); return reply(200, { rows: [] }); }
+    if (q.startsWith("select unsubscribed")) return reply(200, { rows: subs.has(email) ? [{ unsubscribed: subs.get(email) }] : [] });
+    if (q.startsWith("update subscribers set unsubscribed = true")) { if (subs.has(email)) subs.set(email, true); return reply(200, { rows: [] }); }
+  }
   return reply(404, {});
 };
 
@@ -51,7 +55,7 @@ await ok("verify rejects a tampered link, accepts the real one and shows the key
   assert.equal(r.code, 200);
   key = r.body.match(/<code[^>]*>([^<]+)<\/code>/)[1];
   assert.ok(key.length > 20);
-  assert.equal(contacts.get("person@example.com").unsubscribed, false);
+  assert.equal(subs.get("person@example.com"), false);
 });
 
 await ok("send needs the personal key and only mails the owner", async () => {

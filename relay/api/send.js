@@ -1,6 +1,7 @@
 // POST {email, key, subject, text, html?, attachments?}: emails a report to the verified person themselves.
 // The recipient is always `email`; the personal key proves who is asking. Content is never stored here.
 import { body, send, mac, safeEq, fromAddress, normEmail, validEmail, esc, resend, limited, unsubscribeUrl } from "../lib/common.js";
+import { isActive } from "../lib/db.js";
 
 const ALLOWED_EXT = /\.(xlsx|csv|md|txt|ics|pdf|json)$/i;
 const MAX_TEXT = 200_000, MAX_ATTACH_BYTES = 3_000_000;
@@ -29,8 +30,9 @@ export default async function handler(req, res) {
   if (bytes > MAX_ATTACH_BYTES) return send(res, 413, { error: "attachments too large" });
 
   // The person must still be registered and not unsubscribed.
-  const c = await resend(`/contacts/${encodeURIComponent(email)}`);
-  if (!c.ok || c.data?.unsubscribed) return send(res, 403, { error: "address not registered or unsubscribed" });
+  let active = false;
+  try { active = await isActive(email); } catch { return send(res, 502, { error: "subscriber store unavailable" }); }
+  if (!active) return send(res, 403, { error: "address not registered or unsubscribed" });
 
   const unsub = unsubscribeUrl(email);
   const html = b.html ? String(b.html) : `<div style="font-family:system-ui,sans-serif;line-height:1.5;white-space:pre-wrap">${esc(text)}</div>`;

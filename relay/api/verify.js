@@ -1,5 +1,6 @@
 // GET ?e&x&t: proves the person controls the address, registers it and shows their personal key.
-import { send, page, mac, safeEq, normEmail, validEmail, esc, resend, unsubscribeUrl } from "../lib/common.js";
+import { send, page, mac, safeEq, normEmail, validEmail, esc, unsubscribeUrl } from "../lib/common.js";
+import { subscribe } from "../lib/db.js";
 
 export default async function handler(req, res) {
   const url = new URL(req.url, "http://x");
@@ -7,9 +8,7 @@ export default async function handler(req, res) {
   if (!validEmail(email) || !Number.isFinite(exp) || exp < Date.now() || !safeEq(t, mac(["verify", email, exp])))
     return page(res, 400, "Link expired", "<h1>This link is invalid or expired</h1><p>Ask Claude to register your email again to get a new link.</p>");
 
-  let r = await resend("/contacts", { method: "POST", data: { email, unsubscribed: false } });
-  if (!r.ok) r = await resend(`/contacts/${encodeURIComponent(email)}`, { method: "PATCH", data: { unsubscribed: false } });
-  if (!r.ok) return page(res, 502, "Error", "<h1>Something went wrong</h1><p>Please try again in a few minutes.</p>");
+  try { await subscribe(email); } catch { return page(res, 502, "Error", "<h1>Something went wrong</h1><p>Please try again in a few minutes.</p>"); }
 
   const key = mac(["key", email]);
   return page(res, 200, "Email confirmed", `<h1>Email confirmed</h1>
