@@ -43,6 +43,17 @@ Solo para eventos seguidos (`watching`, `deep-dive`, `attending`), según `remin
 
 ## Paso D · Correo — `automation.email`
 
+**Orden de preferencia para enviar:** (1) el conector de correo del propio usuario (Gmail, Outlook, su MCP de correo); (2) si no tiene ninguno, el **servicio de correo de Event Radar** (`reports.email_via: relay`), descrito abajo; (3) archivos en `delivery_folder`.
+
+### Servicio de correo de Event Radar (sin conector de correo)
+Usuarios sin conector reciben su reporte en su correo mediante un servicio pequeño del autor del plugin (`relay/`). Antes de usarlo, **explícale en palabras simples y pide su OK**: "Para enviarte el reporte por correo sin que conectes nada, el correo pasa por un servidor del autor de Event Radar y sale con su cuenta de Resend. Solo se envía a tu propia dirección, no se guarda el contenido en ese servidor (el proveedor de correo conserva un registro del envío) y puedes darte de baja cuando quieras."
+
+1. **Registro (una vez):** `node scripts/event-radar.mjs relay-register --email <su correo>`. Le llega un correo de confirmación; al hacer clic ve su **clave personal**. Pídele que te la pegue y guárdala en `reports.relay_key` (junto con `reports.relay_url` y `reports.email_via: relay`). Nunca imprimas la clave en reportes ni la pongas en el repo.
+2. **Envío:** `node scripts/event-radar.mjs relay-send --email <su correo> --key <clave> --subject "…" --text-file <data>/reports/package/digest.md --attach <data>/reports/package/event-radar.xlsx,<data>/reports/package/report.md`. Solo llega a su propia dirección; límite de 30 correos al día y adjuntos de hasta 3 MB (xlsx, csv, md, txt, ics, pdf, json).
+3. Si falla (clave inválida, dado de baja, límite), díselo y deja los archivos en `delivery_folder`.
+4. Cada correo incluye un enlace para darse de baja. Si el usuario lo pide en el chat, explícale que use ese enlace o que vuelva a registrarse para reactivar.
+
+### Reglas generales de correo
 Correo corto al propio usuario (`reports.email_to`): top 5 con su "por qué", próximos deadlines (del `Timeline`), digest y adjuntos (`event-radar.xlsx` y `report.md`, o el enlace a la hoja). Si `reminders.auto_send_to_self` es `true` y el destinatario es **exactamente** `reports.email_to` → se envía sin pedir aprobación. Cualquier otro destinatario, o un cambio de contenido sensible: muestra el borrador primero. Sin conector de correo: deja los archivos en `delivery_folder` y avísalo.
 
 ## Paso E · Registro y resumen

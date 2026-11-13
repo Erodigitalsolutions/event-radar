@@ -1,0 +1,7 @@
+{
+  "name": "event-radar-relay",
+  "private": true,
+  "type": "module",
+  "description": "Tiny email relay for Event Radar: verified people receive their own reports. Holds the Resend key so it never ships in the plugin.",
+  "engines": { "node": ">=18" }
+}

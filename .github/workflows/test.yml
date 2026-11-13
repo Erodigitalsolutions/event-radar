@@ -12,3 +12,4 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: "${{ matrix.node }}" }
       - run: node tests/smoke.mjs
+      - run: node tests/relay.mjs

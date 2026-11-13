@@ -736,6 +736,34 @@ function cmdLearn(a) {
   if (a.out && a.out !== true) { writeJson(a.out, out); console.log(`Aprendizaje escrito en ${a.out}`); } else console.log(JSON.stringify(out, null, 2));
 }
 
+
+// ---------- relay: correo del reporte al propio usuario via el servicio de Event Radar ----------
+// El servidor guarda la clave de Resend; aqui solo viaja el correo del usuario y su clave personal.
+const DEFAULT_RELAY = "";
+function relayUrl(a) {
+  const u = String(a["relay-url"] && a["relay-url"] !== true ? a["relay-url"] : process.env.EVENT_RADAR_RELAY || DEFAULT_RELAY).replace(/\/$/, "");
+  if (!u) die("falta --relay-url (reports.relay_url del perfil)");
+  return u;
+}
+async function relayPost(a, p, payload) {
+  const r = await fetch(relayUrl(a) + p, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+  let json = {}; try { json = await r.json(); } catch { /* sin cuerpo */ }
+  return { ok: r.ok, status: r.status, json };
+}
+async function cmdRelayRegister(a) {
+  if (!a.email || a.email === true) die("uso: relay-register --email tu@correo.com [--relay-url URL]");
+  const r = await relayPost(a, "/api/register", { email: a.email });
+  console.log(JSON.stringify({ status: r.status, ...r.json }, null, 2));
+  if (!r.ok) process.exit(1);
+}
+async function cmdRelaySend(a) {
+  for (const k of ["email", "key", "subject", "text-file"]) if (!a[k] || a[k] === true) die("uso: relay-send --email tu@correo.com --key CLAVE --subject \"Asunto\" --text-file cuerpo.md [--attach a.xlsx,b.md] [--relay-url URL]");
+  const attachments = (a.attach && a.attach !== true ? String(a.attach).split(",") : []).map((p) => ({ filename: p.split(/[\\/]/).pop(), content: fs.readFileSync(p).toString("base64") }));
+  const r = await relayPost(a, "/api/send", { email: a.email, key: a.key, subject: a.subject, text: fs.readFileSync(a["text-file"], "utf8"), attachments });
+  console.log(JSON.stringify({ status: r.status, ...r.json }, null, 2));
+  if (!r.ok) process.exit(1);
+}
+
 // ---------- main ----------
 const args = parseArgs(process.argv.slice(2));
 const cmd = args._[0];
@@ -751,7 +779,9 @@ else if (cmd === "longlist") cmdLonglist(args);
 else if (cmd === "status") cmdStatus(args);
 else if (cmd === "crm") cmdCrm(args);
 else if (cmd === "export") cmdExport(args);
+else if (cmd === "relay-register") cmdRelayRegister(args).catch((e) => die(e.message));
+else if (cmd === "relay-send") cmdRelaySend(args).catch((e) => die(e.message));
 else if (cmd === "outcome") cmdOutcome(args);
 else if (cmd === "post-event") cmdPostEvent(args);
 else if (cmd === "learn") cmdLearn(args);
-else die("comandos: merge | score | report | dossier | contacts | reminders | ics | digest | longlist | status | crm | export | outcome | post-event | learn");
+else die("comandos: merge | score | report | dossier | contacts | reminders | ics | digest | longlist | status | crm | export | relay-register | relay-send | outcome | post-event | learn");

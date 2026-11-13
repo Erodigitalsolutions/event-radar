@@ -74,7 +74,7 @@ Reglas de conducción:
 38. Al cerrar cada fase, ¿quieres que yo haga la entrega completa sin preguntarte cada vez? Pregunta cada una por separado y guarda la respuesta en `automation`:
     - **Hoja de cálculo**: crear (y mantener al día) una hoja con todos los eventos, precios, timeline y puntajes → `automation.sheet: create | update_only | off`.
     - **Calendario**: crear los recordatorios y deadlines de los eventos que sigas → `automation.calendar: on | off`.
-    - **Correo**: enviarte el reporte corto con adjuntos a tu propia dirección → `automation.email: self_only | ask | off`.
+    - **Correo**: enviarte el reporte corto con adjuntos a tu propia dirección → `automation.email: self_only | ask | off`. Si no tiene conector de correo, ofrece el servicio de correo de Event Radar (`relay`) explicando en simple cómo funciona y qué datos pasan (ver `delivery-and-sync.md`) y haz el registro con su OK.
     Explica qué se crea y dónde; nada sale a terceros. Detalle en `delivery-and-sync.md`.
 
 ## Cierre

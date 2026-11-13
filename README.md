@@ -78,6 +78,10 @@ Fictional sample data is in [`examples/`](examples/). Details: [events-schema.md
 
 Calendar (Google/Outlook), email (Gmail or your own mail MCP), Google Sheets/Drive, Slack, Notion, Monday, HubSpot… The onboarding asks what you use and [connectors.md](skills/event-radar/references/connectors.md) maps each to a fallback (`.ics` file, CSV/Excel, local folder), so nothing depends on them. Anything that sends or creates something outside your machine asks first, except what you authorised during onboarding (for example, emailing the report to yourself).
 
+## Email without connecting anything
+
+If you have no email connector, Event Radar can email your reports to **you** through a small service run by the plugin's author (code in [`relay/`](relay/)). You confirm your address once by clicking a link; you get a personal key that only lets the service email that one address. What passes through: the report you ask it to send (not stored on the server; the email provider, Resend, keeps a send log). Every email has an unsubscribe link, and it never sends to anyone but you. If you prefer, use your own Gmail/Outlook connector instead, or just keep the files.
+
 ## Principles
 
 - **Public, not private:** no logged-in scraping; LinkedIn only through public pages that show up in search.
@@ -90,6 +94,7 @@ Calendar (Google/Outlook), email (Gmail or your own mail MCP), Google Sheets/Dri
 
 ```bash
 node tests/smoke.mjs                 # all commands + checks that dist/ is up to date
+node tests/relay.mjs                 # email relay (fake Resend, no network)
 node tools/build-skill-zip.mjs       # rebuild dist/event-radar-skill.zip after changing the skill
 ```
 
